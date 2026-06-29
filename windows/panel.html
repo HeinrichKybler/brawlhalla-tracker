@@ -11,7 +11,8 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font: 13px/1.3 "Segoe UI", sans-serif; background: var(--bg); color: var(--text); padding: 12px; user-select: none; }
   h1 { font-size: 20px; margin-bottom: 2px; }
-  .sub { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+  .head { margin-bottom: 12px; }
+  .sub { color: var(--muted); font-size: 12px; }
   .elo { font-size: 16px; font-weight: 600; }
   .tier { color: var(--accent2); }
   section { margin-top: 14px; }
@@ -27,13 +28,24 @@
   #wl button { flex: 1; padding: 8px; border: 0; border-radius: 4px; color: #fff; font-weight: 600; cursor: pointer; }
   #win { background: var(--success); } #loss { background: var(--danger); }
   #empty { color: var(--muted); margin-top: 40px; text-align: center; }
+
+  /* landscape režim (overlay na hlavním monitoru, Alt+T) */
+  body.wide { padding: 10px 14px; }
+  body.wide #content { display: flex; flex-direction: row; align-items: flex-start; gap: 18px; }
+  body.wide .head { width: 150px; flex: 0 0 auto; margin-bottom: 0; }
+  body.wide h1 { font-size: 17px; }
+  body.wide section { margin-top: 0; flex: 1; min-width: 0; }
+  body.wide #wl { flex: 0 0 auto; flex-direction: column; margin-top: 0; width: 70px; }
+  body.wide #empty { margin-top: 20px; }
 </style>
 </head>
 <body>
   <div id="empty">Press <b>J</b> in-game to scan opponent.</div>
   <div id="content" style="display:none">
-    <h1 id="name"></h1>
-    <div class="sub"><span class="elo" id="elo"></span> · <span class="tier" id="tier"></span> · peak <span id="peak"></span></div>
+    <div class="head">
+      <h1 id="name"></h1>
+      <div class="sub"><span class="elo" id="elo"></span> · <span class="tier" id="tier"></span> · peak <span id="peak"></span></div>
+    </div>
     <section><h2>Top legends</h2><div id="legends"></div></section>
     <section><h2>Top weapons</h2><div id="weapons"></div></section>
     <div id="wl"><button id="win">Win</button><button id="loss">Loss</button></div>

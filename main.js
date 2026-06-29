@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { exec } = require('child_process');
 const { uIOhook, UiohookKey } = require('uiohook-napi');
 
 function loadEnv() {
@@ -23,31 +24,57 @@ const api = require('./api');
 const ocr = require('./ocr');
 const { initAutoUpdate } = require('./updater');
 
-let panelWin, dashWin, tray, ocrRunning = false;
+const PANEL_HTML = path.join(__dirname, 'windows', 'panel.html');
+let panelWin, overlayWin, dashWin, tray, gameTimer = null;
+let ocrRunning = false, gameRunning = false;
 app.isQuitting = false;
 
+// --- panel na druhém monitoru (na výšku) ---
 function createPanel() {
   const displays = screen.getAllDisplays();
   const ext = displays.find(d => d.bounds.x !== 0 || d.bounds.y !== 0) || displays[0];
   panelWin = new BrowserWindow({
-    x: ext.bounds.x + 20,
-    y: ext.bounds.y + 20,
-    width: 360,
-    height: 660,
-    frame: false,
-    skipTaskbar: true,
-    alwaysOnTop: false,
+    x: ext.bounds.x + 20, y: ext.bounds.y + 20,
+    width: 360, height: 660,
+    frame: false, skipTaskbar: true, alwaysOnTop: false, show: false,
     webPreferences: { nodeIntegration: true, contextIsolation: false }
   });
-  panelWin.loadFile(path.join(__dirname, 'windows', 'panel.html'));
+  panelWin.loadFile(PANEL_HTML, { query: { mode: 'portrait' } });
   panelWin.on('close', e => { if (!app.isQuitting) { e.preventDefault(); panelWin.hide(); } });
+}
+
+// --- overlay na hlavním monitoru (na šířku, Alt+T) ---
+function createOverlay() {
+  const prim = screen.getPrimaryDisplay();
+  const W = 820, H = 210;
+  overlayWin = new BrowserWindow({
+    x: Math.round(prim.bounds.x + (prim.bounds.width - W) / 2), y: prim.bounds.y + 40,
+    width: W, height: H,
+    frame: false, skipTaskbar: true, alwaysOnTop: true, show: false,
+    webPreferences: { nodeIntegration: true, contextIsolation: false }
+  });
+  overlayWin.setAlwaysOnTop(true, 'screen-saver');
+  overlayWin.loadFile(PANEL_HTML, { query: { mode: 'wide' } });
+  overlayWin.on('close', e => { if (!app.isQuitting) { e.preventDefault(); overlayWin.hide(); } });
+}
+
+function togglePanel() {
+  if (!panelWin || panelWin.isDestroyed()) return;
+  if (panelWin.isVisible()) panelWin.hide(); else panelWin.showInactive();
+}
+function toggleOverlay() {
+  if (!overlayWin || overlayWin.isDestroyed()) createOverlay();
+  if (overlayWin.isVisible()) overlayWin.hide(); else overlayWin.show();
+}
+
+function broadcast(channel, payload) {
+  for (const w of [panelWin, overlayWin]) if (w && !w.isDestroyed()) w.webContents.send(channel, payload);
 }
 
 function openDashboard() {
   if (dashWin && !dashWin.isDestroyed()) { dashWin.show(); dashWin.focus(); return; }
   dashWin = new BrowserWindow({
-    width: 1100,
-    height: 800,
+    width: 1100, height: 800,
     webPreferences: { nodeIntegration: true, contextIsolation: false }
   });
   dashWin.loadFile(path.join(__dirname, 'windows', 'dashboard.html'));
@@ -66,9 +93,8 @@ function createTray() {
   tray.on('double-click', openDashboard);
 }
 
+// --- hotkeys přes pasivní hook (neblokují klávesy) ---
 let triggerKeycode = UiohookKey.J;
-
-// název klávesy ("J", "F8", i "Alt+J" → bere se poslední token) → uiohook keycode
 function keyNameToCode(name) {
   const key = String(name || 'J').trim().toUpperCase().split('+').pop();
   return UiohookKey[key] != null ? UiohookKey[key] : UiohookKey.J;
@@ -76,17 +102,38 @@ function keyNameToCode(name) {
 function refreshTriggerKey() {
   triggerKeycode = keyNameToCode(db.getSetting('hotkey') || 'J');
 }
-
-// pasivní global hook: stisk klávesy J jen poslouchá, NEblokuje (J dál normálně píše).
-// Trigger jen bez modifikátorů (ne Shift+J, ne Ctrl+J, ne Alt+J).
 function startHook() {
   refreshTriggerKey();
   uIOhook.on('keydown', e => {
-    if (e.keycode === triggerKeycode && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey) {
-      runOcr();
-    }
+    const noMods = !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey;
+    if (e.keycode === triggerKeycode && noMods) { runOcr(); return; }
+    if (e.keycode === UiohookKey.T && e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) { togglePanel(); return; }
+    if (e.keycode === UiohookKey.T && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) { toggleOverlay(); return; }
   });
   uIOhook.start();
+}
+
+// --- watcher hry: app aktivní jen když běží Brawlhalla ---
+function checkGame() {
+  exec('tasklist /FI "IMAGENAME eq Brawlhalla.exe" /NH', { windowsHide: true }, (err, stdout) => {
+    const running = !err && /brawlhalla\.exe/i.test(stdout);
+    if (running !== gameRunning) { gameRunning = running; onGameState(running); }
+  });
+}
+function onGameState(running) {
+  if (!running) { // hra zavřená → schovej okna, app jde idle do tray
+    if (panelWin && !panelWin.isDestroyed()) panelWin.hide();
+    if (overlayWin && !overlayWin.isDestroyed()) overlayWin.hide();
+  }
+}
+function startGameWatcher() {
+  checkGame();
+  gameTimer = setInterval(checkGame, 5000);
+}
+
+function setupAutostart() {
+  if (!app.isPackaged) return;
+  try { app.setLoginItemSettings({ openAtLogin: true, path: process.execPath, args: [] }); } catch (_) {}
 }
 
 async function lookupSelf() {
@@ -100,6 +147,7 @@ async function lookupSelf() {
 
 async function runOcr() {
   if (ocrRunning) return;
+  if (app.isPackaged && !gameRunning) return; // aktivní jen při hře (v devu povoleno pro test)
   ocrRunning = true;
   try {
     const myName = db.getSetting('my_name') || '';
@@ -115,17 +163,16 @@ async function runOcr() {
         ]);
         const weaponMap = {};
         for (const l of legends) weaponMap[l.legend_id] = [l.weapon_one, l.weapon_two];
-        if (panelWin && !panelWin.isDestroyed()) {
-          panelWin.showInactive();
-          panelWin.webContents.send('panel:data', {
-            opponent: p.username,
-            opponentLegend: res.opponentLegend,
-            ranked, all, weaponMap,
-            myElo: self ? self.elo : null,
-            oppElo: ranked.rating,
-            season: parseInt(db.getSetting('season') || '1', 10)
-          });
-        }
+        const payload = {
+          opponent: p.username,
+          opponentLegend: res.opponentLegend,
+          ranked, all, weaponMap,
+          myElo: self ? self.elo : null,
+          oppElo: ranked.rating,
+          season: parseInt(db.getSetting('season') || '1', 10)
+        };
+        if (panelWin && !panelWin.isDestroyed()) panelWin.showInactive(); // auto-open i když byl skrytý
+        broadcast('panel:data', payload);
       }
     }
   } catch (e) {
@@ -137,13 +184,15 @@ async function runOcr() {
 app.whenReady().then(() => {
   db.init();
   createPanel();
-  openDashboard();
+  createOverlay();
   createTray();
   startHook();
+  setupAutostart();
+  startGameWatcher();
   if (app.isPackaged) initAutoUpdate(); // kontrola aktuálnosti při každém startu
 });
 
-app.on('will-quit', () => { try { uIOhook.stop(); } catch (_) {} });
+app.on('will-quit', () => { if (gameTimer) clearInterval(gameTimer); try { uIOhook.stop(); } catch (_) {} });
 // app žije v systray i po zavření oken — žádný quit zde
 app.on('window-all-closed', () => { });
 

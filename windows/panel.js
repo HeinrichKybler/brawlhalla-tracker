@@ -1,6 +1,8 @@
 const { ipcRenderer } = require('electron');
 const { computeWeaponUsage, WEAPON_MAP } = require('../api');
 
+if (new URLSearchParams(location.search).get('mode') === 'wide') document.body.classList.add('wide');
+
 let ctx = null;
 
 const norm = s => (s || '').toLowerCase().replace(/[\s_]+/g, '');
