@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg:#0d0d0f; --surface:#16161a; --surface2:#1e1e24; --border:#2a2a35;
+    --accent:#7c3aed; --accent2:#a855f7; --text:#e2e8f0; --muted:#64748b;
+    --success:#22c55e; --danger:#ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 13px/1.3 "Segoe UI", sans-serif; background: var(--bg); color: var(--text); padding: 12px; user-select: none; }
+  h1 { font-size: 20px; margin-bottom: 2px; }
+  .sub { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+  .elo { font-size: 16px; font-weight: 600; }
+  .tier { color: var(--accent2); }
+  section { margin-top: 14px; }
+  section > h2 { font-size: 12px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; letter-spacing: .5px; }
+  .row { margin-bottom: 6px; }
+  .row .top { display: flex; justify-content: space-between; font-size: 12px; }
+  .row .top .wr { color: var(--muted); }
+  .bar { height: 6px; background: var(--surface2); border-radius: 3px; margin-top: 2px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: var(--accent); }
+  .cur .bar > span { background: var(--accent2); }
+  .cur .name::after { content: " ◂ now"; color: var(--accent2); font-size: 10px; }
+  #wl { display: flex; gap: 8px; margin-top: 16px; }
+  #wl button { flex: 1; padding: 8px; border: 0; border-radius: 4px; color: #fff; font-weight: 600; cursor: pointer; }
+  #win { background: var(--success); } #loss { background: var(--danger); }
+  #empty { color: var(--muted); margin-top: 40px; text-align: center; }
+</style>
+</head>
+<body>
+  <div id="empty">Press <b>J</b> in-game to scan opponent.</div>
+  <div id="content" style="display:none">
+    <h1 id="name"></h1>
+    <div class="sub"><span class="elo" id="elo"></span> · <span class="tier" id="tier"></span> · peak <span id="peak"></span></div>
+    <section><h2>Top legends</h2><div id="legends"></div></section>
+    <section><h2>Top weapons</h2><div id="weapons"></div></section>
+    <div id="wl"><button id="win">Win</button><button id="loss">Loss</button></div>
+  </div>
+  <script src="panel.js"></script>
+</body>
+</html>

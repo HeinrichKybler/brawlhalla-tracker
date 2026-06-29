@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg:#0d0d0f; --surface:#16161a; --surface2:#1e1e24; --border:#2a2a35;
+    --accent:#7c3aed; --accent2:#a855f7; --text:#e2e8f0; --muted:#64748b;
+    --success:#22c55e; --danger:#ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 14px/1.4 "Segoe UI", sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+  h1 { font-size: 22px; margin-bottom: 16px; }
+  .settings { display: flex; gap: 8px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+  .settings input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 6px 8px; border-radius: 4px; }
+  .settings button { background: var(--accent); border: 0; color: #fff; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+  .settings button:hover { background: var(--accent2); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  .card .val { font-size: 22px; font-weight: 600; margin-top: 4px; }
+  .pos { color: var(--success); } .neg { color: var(--danger); }
+  canvas { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; width: 100%; height: 260px; }
+  h2 { font-size: 13px; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
+  table { border-collapse: collapse; }
+  td { padding: 3px 14px 3px 0; }
+</style>
+</head>
+<body>
+  <h1>Brawlhalla Tracker</h1>
+  <div class="settings">
+    <input id="myname" placeholder="Your in-game name">
+    <button id="savename">Save name</button>
+    <input id="hotkey" placeholder="Hotkey (e.g. Alt+J)" style="width:140px">
+    <button id="savehotkey">Save hotkey</button>
+    <button id="updtitles">Update titles</button>
+    <span id="msg" style="color:#8a93a6"></span>
+  </div>
+
+  <h2>ELO over time</h2>
+  <canvas id="chart" width="1040" height="260"></canvas>
+
+  <div class="grid" id="stats"></div>
+
+  <h2>Peak ELO per season</h2>
+  <table id="seasons"></table>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

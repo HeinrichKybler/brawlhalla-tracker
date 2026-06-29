@@ -1,0 +1,39 @@
+{
+  "name": "brawlhalla-tracker",
+  "version": "1.0.0",
+  "description": "In-game opponent panel + dashboard for Brawlhalla",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "release": "electron-builder --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9",
+    "jimp": "^0.22.12",
+    "screenshot-desktop": "^1.15.1",
+    "tesseract.js": "^5.1.1"
+  },
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.brawlhalla.tracker",
+    "productName": "Brawlhalla Tracker",
+    "artifactName": "BrawlhallaTracker-${version}.${ext}",
+    "publish": {
+      "provider": "github",
+      "owner": "HeinrichKybler",
+      "repo": "brawlhalla-tracker"
+    },
+    "files": ["**/*", "!**/*.db", "!**/*.db-*", "!.env", "!dist${/*}"],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
