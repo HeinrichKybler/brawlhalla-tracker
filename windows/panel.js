@@ -1,17 +1,23 @@
 const { ipcRenderer } = require('electron');
 const { computeWeaponUsage, WEAPON_MAP } = require('../api');
 
-if (new URLSearchParams(location.search).get('mode') === 'wide') document.body.classList.add('wide');
-
 let ctx = null;
 
 const norm = s => (s || '').toLowerCase().replace(/[\s_]+/g, '');
 
-function bar(name, fraction, sub, current) {
+function setDot(state, label) {
+  const dot = document.getElementById('dot');
+  if (dot) dot.className = 'dot' + (state ? ' ' + state : '');
+  const l = document.getElementById('dotlbl');
+  if (l) l.textContent = label;
+}
+
+function bar(name, fraction, right, below, current) {
   const pct = Math.max(2, Math.round(fraction * 100));
   return `<div class="row ${current ? 'cur' : ''}">
-    <div class="top"><span class="name">${name}</span><span class="wr">${sub || ''}</span></div>
+    <div class="top"><span class="name">${name}</span><span class="wr">${right || ''}</span></div>
     <div class="bar"><span style="width:${pct}%"></span></div>
+    ${below ? `<div class="sub2">${below}</div>` : ''}
   </div>`;
 }
 
@@ -45,6 +51,7 @@ function currentWeapons(d) {
 
 function render(d) {
   ctx = d;
+  setDot('loaded', 'načteno');
   document.getElementById('empty').style.display = 'none';
   document.getElementById('content').style.display = 'block';
   document.getElementById('name').textContent = d.opponent;
@@ -54,10 +61,11 @@ function render(d) {
 
   const legs = topLegends(d.ranked, d.opponentLegend);
   const maxG = Math.max(1, ...legs.map(l => l.games));
-  document.getElementById('legends').innerHTML = legs.map(l =>
-    bar(l.name || '?', l.games / maxG, `${Math.round((l.winrate || 0) * 100)}% · ${l.games}g`,
-      norm(l.name) === norm(d.opponentLegend))
-  ).join('');
+  document.getElementById('legends').innerHTML = legs.map(l => {
+    const pct = Math.round(l.games / maxG * 100);
+    return bar(l.name || '?', l.games / maxG, `${Math.round((l.winrate || 0) * 100)}%`,
+      `${pct}% · ${l.games}g`, norm(l.name) === norm(d.opponentLegend));
+  }).join('');
 
   let weapons = computeWeaponUsage(d.all.legends, d.weaponMap);
   const cur = currentWeapons(d);
@@ -75,7 +83,7 @@ function render(d) {
   }
   const maxW = Math.max(1, ...weapons.map(w => w.usage));
   document.getElementById('weapons').innerHTML = weapons.map(w =>
-    bar(w.weapon, w.usage / maxW, '', cur.includes(w.weapon))
+    bar(w.weapon, w.usage / maxW, '', `${Math.round(w.usage / maxW * 100)}%`, cur.includes(w.weapon))
   ).join('');
 }
 
@@ -93,3 +101,7 @@ document.getElementById('win').onclick = () => saveResult('win');
 document.getElementById('loss').onclick = () => saveResult('loss');
 
 ipcRenderer.on('panel:data', (e, d) => render(d));
+ipcRenderer.on('panel:status', (e, s) => {
+  if (s === 'loading') setDot('loading', 'načítání');
+  else if (s === 'error') setDot('error', 'nenalezeno');
+});

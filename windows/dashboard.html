@@ -9,41 +9,210 @@
     --success:#22c55e; --danger:#ef4444;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font: 14px/1.4 "Segoe UI", sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
-  h1 { font-size: 22px; margin-bottom: 16px; }
-  .settings { display: flex; gap: 8px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
-  .settings input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 6px 8px; border-radius: 4px; }
-  .settings button { background: var(--accent); border: 0; color: #fff; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
-  .settings button:hover { background: var(--accent2); }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
-  .card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
-  .card .val { font-size: 22px; font-weight: 600; margin-top: 4px; }
-  .pos { color: var(--success); } .neg { color: var(--danger); }
-  canvas { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; width: 100%; height: 260px; }
-  h2 { font-size: 13px; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
-  table { border-collapse: collapse; }
-  td { padding: 3px 14px 3px 0; }
+  html, body { height: 100%; }
+  body { font: 13px/1.4 "Segoe UI", sans-serif; background: var(--bg); color: var(--text);
+    display: grid; grid-template-rows: auto 1fr; user-select: none; }
+
+  /* titlebar */
+  .titlebar { display: flex; justify-content: space-between; align-items: center;
+    background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 8px 16px; }
+  .titlebar .left { display: flex; align-items: center; gap: 14px; }
+  .brand { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
+  .logo { width: 16px; height: 16px; border-radius: 4px; background: var(--accent);
+    border: 0.5px solid var(--accent2); position: relative; }
+  .logo::after { content: "⚔"; position: absolute; inset: 0; font-size: 10px; color: #fff;
+    display: flex; align-items: center; justify-content: center; }
+  .tabs { display: flex; gap: 4px; }
+  .tab { font-size: 12px; color: var(--muted); padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+  .tab.active { color: var(--accent2); background: var(--surface2); }
+  .titlebar .right { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--muted); }
+  .sdot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+  .sdot.ok { background: var(--success); }
+  .kbd { font-size: 10px; color: var(--muted); background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: 5px; padding: 2px 7px; }
+
+  /* body grid */
+  .body { display: grid; grid-template-columns: 220px 1fr; min-height: 0; }
+  .sidebar { background: var(--bg); border-right: 0.5px solid var(--border); padding: 12px; overflow-y: auto; }
+  .main { padding: 14px; overflow-y: auto; background: var(--bg); }
+
+  .seclabel { font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: .5px;
+    margin: 12px 2px 6px; }
+  .seclabel:first-child { margin-top: 0; }
+
+  /* profile card */
+  .pcard { background: var(--surface); border: 0.5px solid var(--border); border-radius: 10px;
+    padding: 12px; margin-bottom: 10px; }
+  .prow { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--surface2);
+    border: 0.5px solid var(--border); display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: var(--accent2); position: relative; flex: 0 0 auto; }
+  .avatar .tierdot { position: absolute; right: -2px; bottom: -2px; width: 12px; height: 12px;
+    border-radius: 50%; border: 1.5px solid var(--surface); background: var(--muted); }
+  .pname { font-size: 13px; font-weight: 500; }
+  .psub { font-size: 11px; color: var(--muted); }
+  .pelo { font-size: 22px; font-weight: 600; color: var(--accent2); margin-top: 10px; display: flex;
+    align-items: center; gap: 8px; }
+  .pelo .badge { font-size: 10px; font-weight: 400; color: var(--accent2); border: 0.5px solid var(--accent);
+    background: var(--surface2); border-radius: 5px; padding: 1px 6px; }
+  .ppeak { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .ppeak b { color: var(--text); font-weight: 500; }
+
+  /* stat list card */
+  .scard { background: var(--surface); border: 0.5px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .sline { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+  .sline .k { color: var(--muted); }
+  .sline .v { font-weight: 500; }
+  .pos { color: var(--success); } .neg { color: var(--danger); } .acc { color: var(--accent2); }
+
+  /* main cards */
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: 8px; }
+  .graphcard { padding: 12px; margin-bottom: 10px; }
+  .ghead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .ghead h3 { font-size: 12px; font-weight: 500; }
+  .filters { display: flex; gap: 4px; }
+  .filters button { font-size: 11px; color: var(--muted); background: transparent; border: 0.5px solid transparent;
+    border-radius: 5px; padding: 3px 9px; cursor: pointer; }
+  .filters button.active { color: var(--accent2); background: var(--surface2); border-color: var(--accent); }
+  #chart { width: 100%; height: 90px; display: block; }
+
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+  .metric { padding: 10px 12px; }
+  .metric .label { font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: .5px; }
+  .metric .val { font-size: 18px; font-weight: 500; margin-top: 3px; }
+  .metric .sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .legrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .leg { padding: 8px 10px; }
+  .leg .top { display: flex; justify-content: space-between; }
+  .leg .nm { font-size: 12px; font-weight: 500; }
+  .leg .wr { font-size: 12px; color: var(--success); }
+  .leg .bar { height: 4px; background: var(--surface2); border-radius: 2px; margin: 5px 0 4px; overflow: hidden; }
+  .leg .bar > span { display: block; height: 100%; background: var(--accent); }
+  .leg .sub { font-size: 10px; color: var(--muted); }
+
+  .seagrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .sea { padding: 8px; text-align: center; }
+  .sea .s { font-size: 10px; color: var(--muted); }
+  .sea .e { font-size: 14px; font-weight: 500; color: var(--accent2); }
+  .sea .t { font-size: 10px; color: var(--muted); }
+  .sea.cur { border-color: var(--accent); }
+
+  /* settings view */
+  .view { display: none; }
+  .view.active { display: block; }
+  .setrow { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .setrow label { font-size: 12px; color: var(--muted); width: 120px; }
+  input { background: var(--surface2); border: 0.5px solid var(--border); color: var(--text);
+    padding: 6px 8px; border-radius: 6px; }
+  .btn { background: var(--accent); border: 0; color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+  .btn:hover { background: var(--accent2); }
+  #msg { font-size: 12px; color: var(--muted); }
+  .hint { font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .hint b { color: var(--text); }
 </style>
 </head>
 <body>
-  <h1>Brawlhalla Tracker</h1>
-  <div class="settings">
-    <input id="myname" placeholder="Your in-game name">
-    <button id="savename">Save name</button>
-    <input id="hotkey" placeholder="Trigger key (e.g. J, F8)" style="width:160px">
-    <button id="savehotkey">Save hotkey</button>
-    <button id="updtitles">Update titles</button>
-    <span id="msg" style="color:#8a93a6"></span>
+  <div class="titlebar">
+    <div class="left">
+      <span class="brand"><span class="logo"></span>Brawlhalla Tracker</span>
+      <div class="tabs">
+        <span class="tab active" data-tab="dashboard">Dashboard</span>
+        <span class="tab" data-tab="panel">In-game panel</span>
+        <span class="tab" data-tab="settings">Nastavení</span>
+      </div>
+    </div>
+    <div class="right">
+      <span class="sdot" id="status-dot"></span><span id="status-text">API neaktivní</span>
+      <span class="kbd">ALT+B zobrazit/skrýt</span>
+    </div>
   </div>
 
-  <h2>ELO over time</h2>
-  <canvas id="chart" width="1040" height="260"></canvas>
+  <div class="body">
+    <aside class="sidebar">
+      <div class="pcard">
+        <div class="prow">
+          <div class="avatar" id="pf-avatar">–<span class="tierdot" id="pf-tierdot"></span></div>
+          <div>
+            <div class="pname" id="pf-name">—</div>
+            <div class="psub" id="pf-sub"></div>
+          </div>
+        </div>
+        <div class="pelo"><span id="pf-elo">—</span><span class="badge" id="pf-tier"></span></div>
+        <div class="ppeak"><span>Peak rating</span><b id="pf-peak">—</b></div>
+      </div>
 
-  <div class="grid" id="stats"></div>
+      <div class="seclabel">Session</div>
+      <div class="scard">
+        <div class="sline"><span class="k">ELO dnes</span><span class="v" id="s-elo">—</span></div>
+        <div class="sline"><span class="k">Winrate</span><span class="v acc" id="s-wr">—</span></div>
+        <div class="sline"><span class="k">Win streak</span><span class="v pos" id="s-streak">—</span></div>
+        <div class="sline"><span class="k">Odehráno dnes</span><span class="v" id="s-today">—</span></div>
+      </div>
 
-  <h2>Peak ELO per season</h2>
-  <table id="seasons"></table>
+      <div class="seclabel">Celkově</div>
+      <div class="scard">
+        <div class="sline"><span class="k">Winrate</span><span class="v" id="t-wr">—</span></div>
+        <div class="sline"><span class="k">Prům. ELO soupeřů</span><span class="v" id="t-avgopp">—</span></div>
+        <div class="sline"><span class="k">Průměr her/den</span><span class="v" id="t-perday">—</span></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section class="view active" id="view-dashboard">
+        <div class="card graphcard">
+          <div class="ghead">
+            <h3>ELO v čase</h3>
+            <div class="filters" id="filters">
+              <button data-range="week">Týden</button>
+              <button data-range="month">Měsíc</button>
+              <button data-range="season">Sezóna</button>
+              <button data-range="all" class="active">Vše</button>
+            </div>
+          </div>
+          <canvas id="chart" width="820" height="90"></canvas>
+        </div>
+
+        <div class="metrics" id="metrics"></div>
+
+        <div class="seclabel">Top legendy</div>
+        <div class="legrid" id="legends-grid"></div>
+
+        <div class="seclabel">Peak ELO per sezóna</div>
+        <div class="seagrid" id="seasons-grid"></div>
+      </section>
+
+      <section class="view" id="view-panel">
+        <div class="seclabel">In-game panel</div>
+        <p class="hint">
+          Panel na druhém monitoru a overlay na hlavním monitoru se aktivují automaticky když běží hra.<br><br>
+          <b>J</b> — sken soupeře (panel se otevře sám)<br>
+          <b>Ctrl+T</b> — zapnout/vypnout panel na druhém monitoru<br>
+          <b>Alt+T</b> — vyvolat overlay na hlavním monitoru (na šířku, sám zmizí po 30 s)<br>
+          <b>Alt+B</b> — zobrazit/skrýt tento dashboard
+        </p>
+      </section>
+
+      <section class="view" id="view-settings">
+        <div class="seclabel">Nastavení</div>
+        <div class="setrow">
+          <label>Tvé jméno</label>
+          <input id="myname" placeholder="In-game jméno">
+          <button class="btn" id="savename">Uložit</button>
+        </div>
+        <div class="setrow">
+          <label>Trigger klávesa</label>
+          <input id="hotkey" placeholder="např. J, F8" style="width:120px">
+          <button class="btn" id="savehotkey">Uložit</button>
+        </div>
+        <div class="setrow">
+          <label>Tituly (wiki)</label>
+          <button class="btn" id="updtitles">Aktualizovat seznam</button>
+        </div>
+        <div class="setrow"><span id="msg"></span></div>
+      </section>
+    </main>
+  </div>
 
   <script src="dashboard.js"></script>
 </body>
