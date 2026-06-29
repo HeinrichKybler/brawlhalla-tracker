@@ -156,8 +156,8 @@ function startGameWatcher() {
 }
 
 function setupAutostart() {
-  if (!app.isPackaged) return;
-  try { app.setLoginItemSettings({ openAtLogin: true, path: process.execPath, args: [] }); } catch (_) {}
+  // Autostart vypnut — appku spouštím ručně. Vyčistí i dříve nastavený login item.
+  try { app.setLoginItemSettings({ openAtLogin: false }); } catch (_) {}
 }
 
 const numOrNull = v => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : null; };
