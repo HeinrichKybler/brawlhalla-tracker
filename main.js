@@ -1,6 +1,7 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, screen, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { uIOhook, UiohookKey } = require('uiohook-napi');
 
 function loadEnv() {
   for (const base of [__dirname, process.resourcesPath || '', process.cwd()]) {
@@ -65,10 +66,27 @@ function createTray() {
   tray.on('double-click', openDashboard);
 }
 
-function registerHotkey() {
-  globalShortcut.unregisterAll();
-  const hk = db.getSetting('hotkey') || 'J';
-  try { globalShortcut.register(hk, runOcr); } catch (_) { /* invalid accelerator */ }
+let triggerKeycode = UiohookKey.J;
+
+// název klávesy ("J", "F8", i "Alt+J" → bere se poslední token) → uiohook keycode
+function keyNameToCode(name) {
+  const key = String(name || 'J').trim().toUpperCase().split('+').pop();
+  return UiohookKey[key] != null ? UiohookKey[key] : UiohookKey.J;
+}
+function refreshTriggerKey() {
+  triggerKeycode = keyNameToCode(db.getSetting('hotkey') || 'J');
+}
+
+// pasivní global hook: stisk klávesy J jen poslouchá, NEblokuje (J dál normálně píše).
+// Trigger jen bez modifikátorů (ne Shift+J, ne Ctrl+J, ne Alt+J).
+function startHook() {
+  refreshTriggerKey();
+  uIOhook.on('keydown', e => {
+    if (e.keycode === triggerKeycode && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      runOcr();
+    }
+  });
+  uIOhook.start();
 }
 
 async function lookupSelf() {
@@ -121,17 +139,17 @@ app.whenReady().then(() => {
   createPanel();
   openDashboard();
   createTray();
-  registerHotkey();
+  startHook();
   if (app.isPackaged) initAutoUpdate(); // kontrola aktuálnosti při každém startu
 });
 
-app.on('will-quit', () => globalShortcut.unregisterAll());
+app.on('will-quit', () => { try { uIOhook.stop(); } catch (_) {} });
 // app žije v systray i po zavření oken — žádný quit zde
 app.on('window-all-closed', () => { });
 
 ipcMain.handle('db:matches', () => db.getMatches());
 ipcMain.handle('settings:get', (e, k) => db.getSetting(k));
-ipcMain.handle('settings:set', (e, k, v) => { db.setSetting(k, v); if (k === 'hotkey') registerHotkey(); });
+ipcMain.handle('settings:set', (e, k, v) => { db.setSetting(k, v); if (k === 'hotkey') refreshTriggerKey(); });
 ipcMain.handle('titles:update', async () => { await require('./titles').forceUpdate(); return true; });
 
 // dashboard: po uložení jména → potvrzení nebo chyba

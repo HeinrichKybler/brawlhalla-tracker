@@ -1,6 +1,6 @@
 {
   "name": "brawlhalla-tracker",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "In-game opponent panel + dashboard for Brawlhalla",
   "main": "main.js",
   "scripts": {
@@ -11,6 +11,7 @@
   "dependencies": {
     "electron-updater": "^6.3.9",
     "jimp": "^0.22.12",
+    "uiohook-napi": "^1.5.4",
     "screenshot-desktop": "^1.15.1",
     "tesseract.js": "^5.1.1"
   },
@@ -22,6 +23,7 @@
     "appId": "com.brawlhalla.tracker",
     "productName": "Brawlhalla Tracker",
     "artifactName": "BrawlhallaTracker-${version}.${ext}",
+    "npmRebuild": false,
     "publish": {
       "provider": "github",
       "owner": "HeinrichKybler",
