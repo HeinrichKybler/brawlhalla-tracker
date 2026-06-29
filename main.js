@@ -160,7 +160,30 @@ function setupAutostart() {
   try { app.setLoginItemSettings({ openAtLogin: true, path: process.execPath, args: [] }); } catch (_) {}
 }
 
+const numOrNull = v => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : null; };
+
+// bez API klíče: profil „já" z ručně zadaných hodnot (Nastavení) místo mock dat
+function manualSelf() {
+  const name = db.getSetting('my_name');
+  if (!name) return null;
+  let raw = [];
+  try { raw = JSON.parse(db.getSetting('manual_legends') || '[]'); } catch (_) {}
+  const legends = raw.map(l => {
+    const games = +l.games || 0, wins = +l.wins || 0;
+    return { id: api.legendIdByName(l.name), name: l.name, games, wins, winrate: games ? wins / games : 0 };
+  });
+  const ranked = {
+    rating: numOrNull(db.getSetting('manual_rating')),
+    peak_rating: numOrNull(db.getSetting('manual_peak')),
+    tier: db.getSetting('manual_tier') || '',
+    legends
+  };
+  const all = { legends: legends.map(l => ({ id: l.id, name: l.name, games: l.games, wins: l.wins, t1: 0, t2: 0 })) };
+  return { name, ranked, all };
+}
+
 async function gatherSelf() {
+  if (!process.env.BH_API_KEY) return manualSelf();
   const myName = db.getSetting('my_name');
   if (!myName) return null;
   const p = await api.searchPlayer(myName);

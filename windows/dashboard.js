@@ -196,6 +196,20 @@ document.getElementById('updtitles').onclick = async () => {
   try { await ipc('titles:update'); document.getElementById('msg').textContent = 'tituly aktualizovány'; }
   catch (_) { document.getElementById('msg').textContent = 'aktualizace selhala'; }
 };
+document.getElementById('savestats').onclick = async () => {
+  const legends = document.getElementById('m-legends').value.split('\n').map(l => l.trim()).filter(Boolean)
+    .map(line => { const [name, games, wins] = line.split(',').map(s => (s || '').trim());
+      return { name, games: +games || 0, wins: +wins || 0 }; })
+    .filter(l => l.name);
+  await ipc('settings:set', 'manual_rating', document.getElementById('m-rating').value.trim());
+  await ipc('settings:set', 'manual_peak', document.getElementById('m-peak').value.trim());
+  await ipc('settings:set', 'manual_tier', document.getElementById('m-tier').value.trim());
+  await ipc('settings:set', 'region', document.getElementById('m-region').value.trim());
+  await ipc('settings:set', 'season', document.getElementById('m-season').value.trim());
+  await ipc('settings:set', 'manual_legends', JSON.stringify(legends));
+  document.getElementById('msg').textContent = 'staty uloženy';
+  load();
+};
 
 ipcRenderer.on('refresh', load);
 
@@ -204,5 +218,13 @@ ipcRenderer.on('refresh', load);
   if (n) document.getElementById('myname').value = n;
   const hk = await ipc('settings:get', 'hotkey');
   document.getElementById('hotkey').value = hk || 'J';
+  const g = async k => (await ipc('settings:get', k)) || '';
+  document.getElementById('m-rating').value = await g('manual_rating');
+  document.getElementById('m-peak').value = await g('manual_peak');
+  document.getElementById('m-tier').value = await g('manual_tier');
+  document.getElementById('m-region').value = await g('region');
+  document.getElementById('m-season').value = await g('season');
+  const ml = await g('manual_legends');
+  if (ml) { try { document.getElementById('m-legends').value = JSON.parse(ml).map(l => `${l.name}, ${l.games}, ${l.wins}`).join('\n'); } catch (_) {} }
   load();
 })();

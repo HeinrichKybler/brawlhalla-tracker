@@ -36,6 +36,12 @@ const LEGEND_NAMES = {
   39: 'Magyar', 40: 'Reno', 41: 'Munin'
 };
 const legName = id => LEGEND_NAMES[id] || `Legend ${id}`;
+const normName = s => (s || '').toLowerCase().replace(/[\s_]+/g, '');
+function legendIdByName(name) {
+  const n = normName(name);
+  for (const [id, nm] of Object.entries(LEGEND_NAMES)) if (normName(nm) === n) return +id;
+  return undefined;
+}
 
 const MOCK_PLAYER = {
   id: 0, username: 'Mock Player',
@@ -138,5 +144,5 @@ function computeWeaponUsage(legends, map) {
 }
 
 module.exports = {
-  WEAPON_MAP, searchPlayer, getPlayerRanked, getPlayerAll, getLegends, computeWeaponUsage
+  WEAPON_MAP, searchPlayer, getPlayerRanked, getPlayerAll, getLegends, computeWeaponUsage, legendIdByName
 };

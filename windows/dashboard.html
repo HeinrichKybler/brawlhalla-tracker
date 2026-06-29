@@ -209,6 +209,28 @@
           <label>Tituly (wiki)</label>
           <button class="btn" id="updtitles">Aktualizovat seznam</button>
         </div>
+
+        <div class="seclabel">Ruční staty (dokud není API klíč)</div>
+        <div class="setrow">
+          <label>ELO / Peak</label>
+          <input id="m-rating" placeholder="ELO" style="width:90px">
+          <input id="m-peak" placeholder="Peak" style="width:90px">
+        </div>
+        <div class="setrow">
+          <label>Tier / Region</label>
+          <input id="m-tier" placeholder="např. Gold 2" style="width:120px">
+          <input id="m-region" placeholder="např. EU" style="width:80px">
+          <input id="m-season" placeholder="Sezóna" style="width:70px">
+        </div>
+        <div class="setrow" style="align-items:flex-start">
+          <label>Top legendy</label>
+          <textarea id="m-legends" placeholder="jedna na řádek:  Jméno, hry, výhry&#10;Artemis, 200, 120&#10;Scarlet, 80, 40"
+            style="background:var(--surface2);border:0.5px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;width:280px;height:90px;resize:vertical;font:12px Segoe UI"></textarea>
+        </div>
+        <div class="setrow">
+          <button class="btn" id="savestats">Uložit staty</button>
+        </div>
+
         <div class="setrow"><span id="msg"></span></div>
       </section>
     </main>
