@@ -22,11 +22,18 @@ loadEnv();
 const db = require('./db');
 const api = require('./api');
 const ocr = require('./ocr');
-const { initAutoUpdate } = require('./updater');
+const { initAutoUpdate, autoUpdater } = require('./updater');
 
 let panelWin, overlayWin, dashWin, tray, gameTimer = null, overlayTimer = null;
-let ocrRunning = false, gameRunning = false;
+let ocrRunning = false, gameRunning = false, updateReady = false;
 app.isQuitting = false;
+
+// nainstaluj stažený update jakmile appka není zaneprázdněná hrou (app jinak nikdy nekončí)
+function maybeInstallUpdate() {
+  if (!updateReady || gameRunning) return;
+  app.isQuitting = true;
+  try { autoUpdater.quitAndInstall(true, true); } catch (e) { console.error('[updater]', e && e.message); }
+}
 
 // --- panel na druhém monitoru (na výšku) ---
 function createPanel() {
@@ -45,9 +52,10 @@ function createPanel() {
 // --- overlay na hlavním monitoru (na šířku, Alt+T) ---
 function createOverlay() {
   const prim = screen.getPrimaryDisplay();
-  const W = prim.bounds.width, H = 190;
+  const W = Math.min(1100, prim.bounds.width - 80), H = 190;
   overlayWin = new BrowserWindow({
-    x: prim.bounds.x, y: Math.round(prim.bounds.y + (prim.bounds.height - H) / 2),
+    x: Math.round(prim.bounds.x + (prim.bounds.width - W) / 2),
+    y: Math.round(prim.bounds.y + (prim.bounds.height - H) / 2),
     width: W, height: H,
     frame: false, transparent: true, skipTaskbar: true, alwaysOnTop: true,
     focusable: false, resizable: false, show: false,
@@ -121,8 +129,8 @@ function startHook() {
   uIOhook.on('keydown', e => {
     const noMods = !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey;
     if (e.keycode === triggerKeycode && noMods) { runOcr(); return; }
-    if (e.keycode === UiohookKey.T && e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) { togglePanel(); return; }
-    if (e.keycode === UiohookKey.T && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) { toggleOverlay(); return; }
+    if (e.keycode === UiohookKey.T && e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) { toggleOverlay(); return; }
+    if (e.keycode === UiohookKey.T && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) { togglePanel(); return; }
     if (e.keycode === UiohookKey.B && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) { toggleDashboard(); return; }
   });
   uIOhook.start();
@@ -139,6 +147,7 @@ function onGameState(running) {
   if (!running) {
     if (panelWin && !panelWin.isDestroyed()) panelWin.hide();
     hideOverlay();
+    maybeInstallUpdate(); // hra zavřená → vhodná chvíle nainstalovat čekající update
   }
 }
 function startGameWatcher() {
@@ -212,7 +221,7 @@ app.whenReady().then(() => {
   startHook();
   setupAutostart();
   startGameWatcher();
-  if (app.isPackaged) initAutoUpdate(); // kontrola aktuálnosti při každém startu
+  if (app.isPackaged) initAutoUpdate(() => { updateReady = true; maybeInstallUpdate(); });
 });
 
 app.on('will-quit', () => { if (gameTimer) clearInterval(gameTimer); try { uIOhook.stop(); } catch (_) {} });
