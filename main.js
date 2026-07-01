@@ -24,9 +24,27 @@ const api = require('./api');
 const ocr = require('./ocr');
 const { initAutoUpdate, autoUpdater } = require('./updater');
 
-let panelWin, overlayWin, dashWin, tray, gameTimer = null, overlayTimer = null;
+let panelWin, overlayWin, dashWin, tray, splashWin = null, gameTimer = null, overlayTimer = null;
 let ocrRunning = false, gameRunning = false, updateReady = false;
 app.isQuitting = false;
+
+const APP_ICON = path.join(__dirname, 'assets', 'icon.ico');
+
+// --- splash (fotka na pár vteřin při startu) ---
+function createSplash() {
+  splashWin = new BrowserWindow({
+    width: 320, height: 300,
+    frame: false, transparent: true, alwaysOnTop: true, skipTaskbar: true,
+    resizable: false, center: true, show: false,
+    webPreferences: { nodeIntegration: true, contextIsolation: false }
+  });
+  splashWin.loadFile(path.join(__dirname, 'windows', 'splash.html'));
+  splashWin.once('ready-to-show', () => { if (splashWin && !splashWin.isDestroyed()) splashWin.show(); });
+}
+function closeSplash() {
+  if (splashWin && !splashWin.isDestroyed()) splashWin.close();
+  splashWin = null;
+}
 
 // nainstaluj stažený update jakmile appka není zaneprázdněná hrou (app jinak nikdy nekončí)
 function maybeInstallUpdate() {
@@ -98,9 +116,13 @@ function broadcast(channel, payload) {
 }
 
 function openDashboard() {
-  if (dashWin && !dashWin.isDestroyed()) { dashWin.show(); dashWin.focus(); return; }
+  if (dashWin && !dashWin.isDestroyed()) {
+    if (dashWin.isMinimized()) dashWin.restore();
+    dashWin.show(); dashWin.focus(); return;
+  }
   dashWin = new BrowserWindow({
     width: 1360, height: 900, // větší okno, obsah zvětšen zoomem
+    icon: APP_ICON,
     webPreferences: { nodeIntegration: true, contextIsolation: false }
   });
   applyZoom(dashWin, ZOOM.dashboard);
@@ -279,16 +301,27 @@ async function runOcr() {
   ocrRunning = false;
 }
 
-app.whenReady().then(() => {
-  db.init();
-  createPanel();
-  createOverlay();
-  createTray();
-  startHook();
-  setupAutostart();
-  startGameWatcher();
-  if (app.isPackaged) initAutoUpdate(() => { updateReady = true; maybeInstallUpdate(); });
-});
+// single-instance: druhé spuštění (dvojklik na zástupce) neotevře nový proces
+// (jinak by v tray naskočila druhá ikona) — jen otevře/zaostří dashboard
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => openDashboard());
+  app.whenReady().then(() => {
+    createSplash();
+    db.init();
+    createPanel();
+    createOverlay();
+    createTray();
+    startHook();
+    setupAutostart();
+    startGameWatcher();
+    if (app.isPackaged) initAutoUpdate(() => { updateReady = true; maybeInstallUpdate(); });
+    // splash na ~2,5 s, pak se rovnou otevře dashboard (ne jen běh na pozadí)
+    setTimeout(() => { closeSplash(); openDashboard(); }, 2500);
+  });
+}
 
 app.on('will-quit', () => { if (gameTimer) clearInterval(gameTimer); try { uIOhook.stop(); } catch (_) {} });
 // app žije v systray i po zavření oken — žádný quit zde

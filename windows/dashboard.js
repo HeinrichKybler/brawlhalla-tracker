@@ -382,6 +382,7 @@ function renderProfileLegends(p) {
 function weaponBar(weapon, frac) {
   const pc = Math.round(frac * 100);
   return `<div class="wbar">${A.imgTag(A.weaponIcon(weapon), 26)}
+    <span class="wnm">${escapeHtml(weapon || '—')}</span>
     <div class="bar"><span style="width:${Math.max(2, pc)}%"></span></div>
     <span class="pc">${pc}%</span></div>`;
 }
