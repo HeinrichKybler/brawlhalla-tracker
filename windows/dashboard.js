@@ -188,6 +188,7 @@ function navBack() { if (navIndex > 0) { navIndex--; applyState(navStack[navInde
 function navForward() { if (navIndex < navStack.length - 1) { navIndex++; applyState(navStack[navIndex]); } }
 function applyState(s) {
   if (s.type === 'profile') showProfile(s.name);
+  else if (s.type === 'me') showMyProfile();
   else if (s.type === 'clan') showClan(s.id, s.name);
   else showDashboardTab(s.tab || 'dashboard');
   updateNavButtons();
@@ -223,6 +224,10 @@ window.addEventListener('keydown', e => {
   else if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); navForward(); }
 });
 updateNavButtons();
+
+// klik na profilovou kartu v sidebaru → můj plný profil (stejný jako u ostatních hráčů)
+const pcardEl = document.querySelector('.pcard');
+if (pcardEl) pcardEl.onclick = () => navGo({ type: 'me' });
 
 // ===================== VYHLEDÁVÁNÍ =====================
 const searchInput = document.getElementById('searchInput');
@@ -292,23 +297,38 @@ function escapeHtml(s) { return (s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;
 // ===================== PROFIL HRÁČE =====================
 let profileData = null;
 
-async function showProfile(name) {
+function enterProfileLoading(label) {
   hideDropdown();
   searchInput.value = '';
-  document.getElementById('prof-name').textContent = 'Načítám…';
+  document.getElementById('prof-name').textContent = label || 'Načítám…';
   document.getElementById('prof-sub').textContent = '';
+  document.getElementById('prof-title').hidden = true;
+  document.getElementById('prof-rank').removeAttribute('src');
+  set('prof-elo', '—'); set('prof-tier', ''); set('prof-peak', '—');
   document.getElementById('ptab-info').innerHTML = '';
   document.getElementById('ptab-legends').innerHTML = '';
   document.getElementById('ptab-weapons').innerHTML = '';
   setPTab('info');
   showSpecial('view-profile');
-  const prof = await ipc('player:profile', name).catch(() => null);
-  if (!prof) { document.getElementById('prof-name').textContent = `„${name}" nenalezen`; return; }
+}
+function renderFullProfile(prof) {
   profileData = prof;
   renderProfileHeader(prof);
   renderProfileInfo(prof);
   renderProfileLegends(prof);
   renderProfileWeapons(prof);
+}
+async function showProfile(name) {
+  enterProfileLoading('Načítám…');
+  const prof = await ipc('player:profile', name).catch(() => null);
+  if (!prof) { document.getElementById('prof-name').textContent = `„${name}" nenalezen`; return; }
+  renderFullProfile(prof);
+}
+async function showMyProfile() {
+  enterProfileLoading('Načítám…');
+  const prof = await ipc('me:profile').catch(() => null);
+  if (!prof) { document.getElementById('prof-name').textContent = 'Nastav své jméno v Nastavení'; return; }
+  renderFullProfile(prof);
 }
 
 function renderProfileHeader(p) {

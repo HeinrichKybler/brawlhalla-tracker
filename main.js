@@ -220,38 +220,42 @@ async function gatherSelf() {
   return { name: p.username, ranked, all };
 }
 
-// kompletní profil hráče pro dashboard (základní info + legendy + zbraně + guilda)
-async function buildProfile(name) {
-  const p = await api.searchPlayer(name);
-  if (!p) return null;
-  const [ranked, all, legendsStatic] = await Promise.all([
-    api.getPlayerRanked(p.id),
-    api.getPlayerAll(p.id),
-    api.getLegends().catch(() => [])
-  ]);
+// sdílené skládání profilu (stejný tvar pro cizí hráče i pro „mě") z ranked+all dat
+async function assembleProfile({ id, name, ranked, all, region, clan }) {
+  const legendsStatic = await api.getLegends().catch(() => []);
   const weaponMap = {};
   for (const l of legendsStatic) weaponMap[l.legend_id] = [l.weapon_one, l.weapon_two];
   const legends = (all.legends || []).map(l => {
     const w = weaponMap[l.id] || api.WEAPON_MAP[l.id] || [];
     return {
-      id: l.id, name: l.name, games: l.games, wins: l.wins, kos: l.kos, damage: l.damage,
-      t1: l.t1, t2: l.t2, w1: w[0] || '', w2: w[1] || ''
+      id: l.id, name: l.name, games: l.games, wins: l.wins, kos: l.kos || 0, damage: l.damage || 0,
+      t1: l.t1 || 0, t2: l.t2 || 0, w1: w[0] || '', w2: w[1] || ''
     };
   });
   const weapons = api.computeWeaponStats(all.legends, weaponMap);
   const topLegend = legends.slice().sort((a, b) => b.games - a.games)[0] || null;
+  // ranked totály; pokud chybí (ruční staty), dopočítej z legend
+  const sumG = legends.reduce((a, l) => a + l.games, 0), sumW = legends.reduce((a, l) => a + l.wins, 0);
   return {
-    brawlhalla_id: p.id,
-    name: p.username,
+    brawlhalla_id: id,
+    name,
     rating: ranked.rating, peak_rating: ranked.peak_rating, tier: ranked.tier,
-    region: ranked.region || '',
-    wins: ranked.wins || 0, games: ranked.games || 0,
-    clan: all.clan || null,
+    region: region || ranked.region || '',
+    wins: ranked.wins || sumW, games: ranked.games || sumG,
+    clan: clan || all.clan || null,
     totalKos: all.totalKos || 0, totalDamage: all.totalDamage || 0,
     topLegend: topLegend ? { id: topLegend.id, name: topLegend.name, games: topLegend.games } : null,
     topWeapon: weapons[0] ? { name: weapons[0].weapon } : null,
     legends, weapons, weaponMap
   };
+}
+
+// kompletní profil cizího hráče pro dashboard
+async function buildProfile(name) {
+  const p = await api.searchPlayer(name);
+  if (!p) return null;
+  const [ranked, all] = await Promise.all([api.getPlayerRanked(p.id), api.getPlayerAll(p.id)]);
+  return assembleProfile({ id: p.id, name: p.username, ranked, all });
 }
 
 async function runOcr() {
@@ -344,6 +348,20 @@ ipcMain.handle('me:stats', async () => {
     tier: self.ranked.tier,
     legends: self.ranked.legends
   };
+});
+
+// dashboard: můj vlastní profil ve stejném formátu jako profil cizího hráče
+ipcMain.handle('me:profile', async () => {
+  const self = await gatherSelf().catch(() => null);
+  if (!self) return null;
+  return assembleProfile({
+    id: self.id || null,
+    name: self.name,
+    ranked: self.ranked,
+    all: self.all,
+    region: db.getSetting('region') || '',
+    clan: (self.all && self.all.clan) || null
+  });
 });
 
 // dashboard: po uložení jména → potvrzení nebo chyba

@@ -42,7 +42,9 @@
 
   /* profile card */
   .pcard { background: var(--surface); border: 0.5px solid var(--border); border-radius: 10px;
-    padding: 12px; margin-bottom: 10px; }
+    padding: 12px; margin-bottom: 10px; cursor: pointer; transition: border-color .12s; }
+  .pcard:hover { border-color: var(--accent); }
+  .pcard-hint { font-size: 10px; color: var(--accent2); margin-top: 9px; text-align: right; opacity: .85; }
   .prow { display: flex; align-items: center; gap: 10px; }
   .avatar { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
   .avatar img { width: 44px; height: 44px; object-fit: contain; }
@@ -260,6 +262,7 @@
         </div>
         <div class="pelo"><span id="pf-elo">—</span><span class="badge" id="pf-tier"></span></div>
         <div class="ppeak"><span>Peak rating</span><b id="pf-peak">—</b></div>
+        <div class="pcard-hint">Zobrazit celý profil →</div>
       </div>
 
       <div class="seclabel">Session</div>
