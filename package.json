@@ -1,6 +1,6 @@
 {
   "name": "brawlhalla-tracker",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "In-game opponent panel + dashboard for Brawlhalla",
   "main": "main.js",
   "scripts": {

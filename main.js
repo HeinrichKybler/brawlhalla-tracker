@@ -35,16 +35,23 @@ function maybeInstallUpdate() {
   try { autoUpdater.quitAndInstall(true, true); } catch (e) { console.error('[updater]', e && e.message); }
 }
 
+// zvětšení celého UI (text + ikony) — okna mají místa dost; rozměry níže jsou už poškálované
+const ZOOM = { panel: 1.25, overlay: 1.2, dashboard: 1.25 };
+function applyZoom(win, factor) {
+  win.webContents.on('did-finish-load', () => { try { win.webContents.setZoomFactor(factor); } catch (_) {} });
+}
+
 // --- panel na druhém monitoru (na výšku) ---
 function createPanel() {
   const displays = screen.getAllDisplays();
   const ext = displays.find(d => d.bounds.x !== 0 || d.bounds.y !== 0) || displays[0];
   panelWin = new BrowserWindow({
     x: ext.bounds.x + 20, y: ext.bounds.y + 20,
-    width: 240, height: 660,
+    width: 300, height: 820, // 240×660 * zoom 1.25
     frame: false, skipTaskbar: true, alwaysOnTop: false, show: false,
     webPreferences: { nodeIntegration: true, contextIsolation: false }
   });
+  applyZoom(panelWin, ZOOM.panel);
   panelWin.loadFile(path.join(__dirname, 'windows', 'panel.html'));
   panelWin.on('close', e => { if (!app.isQuitting) { e.preventDefault(); panelWin.hide(); } });
 }
@@ -52,7 +59,7 @@ function createPanel() {
 // --- overlay na hlavním monitoru (na šířku, Alt+T) ---
 function createOverlay() {
   const prim = screen.getPrimaryDisplay();
-  const W = Math.min(1100, prim.bounds.width - 80), H = 190;
+  const W = Math.min(1200, prim.bounds.width - 80), H = 235; // výška zvětšena kvůli zoomu
   overlayWin = new BrowserWindow({
     x: Math.round(prim.bounds.x + (prim.bounds.width - W) / 2),
     y: Math.round(prim.bounds.y + (prim.bounds.height - H) / 2),
@@ -62,6 +69,7 @@ function createOverlay() {
     webPreferences: { nodeIntegration: true, contextIsolation: false }
   });
   overlayWin.setAlwaysOnTop(true, 'screen-saver');
+  applyZoom(overlayWin, ZOOM.overlay);
   overlayWin.loadFile(path.join(__dirname, 'windows', 'overlay.html'));
   overlayWin.on('close', e => { if (!app.isQuitting) { e.preventDefault(); overlayWin.hide(); } });
 }
@@ -92,9 +100,10 @@ function broadcast(channel, payload) {
 function openDashboard() {
   if (dashWin && !dashWin.isDestroyed()) { dashWin.show(); dashWin.focus(); return; }
   dashWin = new BrowserWindow({
-    width: 1180, height: 820,
+    width: 1360, height: 900, // větší okno, obsah zvětšen zoomem
     webPreferences: { nodeIntegration: true, contextIsolation: false }
   });
+  applyZoom(dashWin, ZOOM.dashboard);
   dashWin.loadFile(path.join(__dirname, 'windows', 'dashboard.html'));
 }
 function toggleDashboard() {
