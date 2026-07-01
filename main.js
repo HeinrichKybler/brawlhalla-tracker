@@ -343,12 +343,8 @@ ipcMain.handle('player:profile', async (e, name) => {
   return prof;
 });
 
-// dashboard: profil guildy
-ipcMain.handle('clan:get', async (e, clanId, clanName) => {
-  const clan = await api.getClan(clanId);
-  if (clanName) db.addSearch(clanName, 'clan');
-  return clan;
-});
+// dashboard: profil guildy (guildy se do historie neukládají — nelze je hledat podle jména)
+ipcMain.handle('clan:get', async (e, clanId) => api.getClan(clanId));
 
 ipcMain.on('match:result', (e, m) => {
   db.saveMatch({

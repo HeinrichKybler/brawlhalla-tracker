@@ -135,6 +135,10 @@
   .backbtn { background: var(--surface2); border: 0.5px solid var(--border); color: var(--text);
     border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; flex: 0 0 auto; }
   .backbtn:hover { border-color: var(--accent); color: var(--accent2); }
+  .navbtns { display: flex; gap: 6px; flex: 0 0 auto; }
+  .navbtns .backbtn { min-width: 30px; font-size: 14px; line-height: 1; text-align: center; }
+  .backbtn:disabled { opacity: .35; cursor: default; }
+  .backbtn:disabled:hover { border-color: var(--border); color: var(--text); }
   .phead-rank { width: 46px; height: 46px; object-fit: contain; flex: 0 0 auto; }
   .chead-shield { width: 46px; height: 46px; border-radius: 10px; background: var(--surface2);
     border: 0.5px solid var(--border); display: flex; align-items: center; justify-content: center;
@@ -185,8 +189,8 @@
   .lcard .lh .lg { font-size: 10px; color: var(--muted); }
   .lstats { display: flex; gap: 10px; font-size: 10px; color: var(--muted); margin-bottom: 7px; flex-wrap: wrap; }
   .lstats b { color: var(--text); }
-  .wbar { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
-  .wbar img { width: 16px; height: 16px; object-fit: contain; }
+  .wbar { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+  .wbar img { width: 26px; height: 26px; object-fit: contain; }
   .wbar .bar { flex: 1; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
   .wbar .bar > span { display: block; height: 100%; background: var(--accent); }
   .wbar .pc { font-size: 9px; color: var(--muted); width: 30px; text-align: right; }
@@ -351,7 +355,10 @@
       <!-- profil hráče -->
       <section class="view" id="view-profile">
         <div class="phead">
-          <button class="backbtn" id="prof-back">← Zpět</button>
+          <div class="navbtns">
+            <button class="backbtn navback" title="Zpět (Alt+←, boční tlačítko myši)">←</button>
+            <button class="backbtn navfwd" title="Vpřed (Alt+→)">→</button>
+          </div>
           <img class="phead-rank" id="prof-rank">
           <div class="phead-main">
             <div class="phead-name"><span id="prof-name">—</span><span class="phead-title" id="prof-title" hidden></span></div>
@@ -375,7 +382,10 @@
       <!-- profil guildy -->
       <section class="view" id="view-clan">
         <div class="phead">
-          <button class="backbtn" id="clan-back">← Zpět</button>
+          <div class="navbtns">
+            <button class="backbtn navback" title="Zpět (Alt+←, boční tlačítko myši)">←</button>
+            <button class="backbtn navfwd" title="Vpřed (Alt+→)">→</button>
+          </div>
           <div class="chead-shield">🛡</div>
           <div class="phead-main">
             <div class="phead-name" id="clan-name">—</div>

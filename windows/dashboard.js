@@ -170,28 +170,59 @@ async function load() {
   renderMain();
 }
 
-// nav tabs
-document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
-  document.querySelector('.body').classList.remove('full'); // opusť profil/guildu
-  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-  t.classList.add('active');
-  const id = 'view-' + t.dataset.tab;
-  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === id));
-});
+// ================= NAVIGACE (historie jako v prohlížeči) =================
+let navStack = [{ type: 'dashboard', tab: 'dashboard' }];
+let navIndex = 0;
 
-// ---- přepínání na profil / guildu (skryje sidebar) ----
+function sameState(a, b) {
+  return !!a && !!b && a.type === b.type && a.tab === b.tab && a.name === b.name && a.id === b.id;
+}
+function navGo(state) {
+  if (sameState(navStack[navIndex], state)) { applyState(state); return; } // nezakládej duplicitu
+  navStack = navStack.slice(0, navIndex + 1); // uřízni „vpřed" větev
+  navStack.push(state);
+  navIndex = navStack.length - 1;
+  applyState(state);
+}
+function navBack() { if (navIndex > 0) { navIndex--; applyState(navStack[navIndex]); } }
+function navForward() { if (navIndex < navStack.length - 1) { navIndex++; applyState(navStack[navIndex]); } }
+function applyState(s) {
+  if (s.type === 'profile') showProfile(s.name);
+  else if (s.type === 'clan') showClan(s.id, s.name);
+  else showDashboardTab(s.tab || 'dashboard');
+  updateNavButtons();
+}
+function updateNavButtons() {
+  document.querySelectorAll('.navback').forEach(b => b.disabled = navIndex <= 0);
+  document.querySelectorAll('.navfwd').forEach(b => b.disabled = navIndex >= navStack.length - 1);
+}
+
+function showDashboardTab(tab) {
+  document.querySelector('.body').classList.remove('full');
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === tab));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + tab));
+}
 function showSpecial(viewId) {
   document.querySelector('.body').classList.add('full');
   document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === viewId));
 }
-function backToDashboard() {
-  document.querySelector('.body').classList.remove('full');
-  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === 'dashboard'));
-  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-dashboard'));
-}
-document.getElementById('prof-back').onclick = backToDashboard;
-document.getElementById('clan-back').onclick = backToDashboard;
+
+// nav tabs → nová položka v historii
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => navGo({ type: 'dashboard', tab: t.dataset.tab }));
+// tlačítka zpět/vpřed v hlavičkách
+document.querySelectorAll('.navback').forEach(b => b.onclick = navBack);
+document.querySelectorAll('.navfwd').forEach(b => b.onclick = navForward);
+// boční tlačítka myši (zpět=3 / vpřed=4) + Alt+šipky
+window.addEventListener('mouseup', e => {
+  if (e.button === 3) { e.preventDefault(); navBack(); }
+  else if (e.button === 4) { e.preventDefault(); navForward(); }
+});
+window.addEventListener('keydown', e => {
+  if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); navBack(); }
+  else if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); navForward(); }
+});
+updateNavButtons();
 
 // ===================== VYHLEDÁVÁNÍ =====================
 const searchInput = document.getElementById('searchInput');
@@ -231,7 +262,7 @@ function highlight() {
 }
 function chooseSuggestion(i) {
   const it = sugItems[i]; if (!it) return;
-  openProfile(it.q);
+  navGo({ type: 'profile', name: it.q }); // guildu nelze hledat podle jména (API nemá clan-search)
 }
 
 searchInput.addEventListener('input', () => {
@@ -249,7 +280,7 @@ searchInput.addEventListener('keydown', e => {
   else if (e.key === 'Enter') {
     e.preventDefault();
     if (selIdx >= 0 && sugItems[selIdx]) chooseSuggestion(selIdx);
-    else if (searchInput.value.trim().length >= 2) openProfile(searchInput.value.trim());
+    else if (searchInput.value.trim().length >= 2) navGo({ type: 'profile', name: searchInput.value.trim() });
   } else if (e.key === 'Escape') { hideDropdown(); searchInput.blur(); }
 });
 document.addEventListener('click', e => { if (!e.target.closest('#searchWrap')) hideDropdown(); });
@@ -261,7 +292,7 @@ function escapeHtml(s) { return (s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;
 // ===================== PROFIL HRÁČE =====================
 let profileData = null;
 
-async function openProfile(name) {
+async function showProfile(name) {
   hideDropdown();
   searchInput.value = '';
   document.getElementById('prof-name').textContent = 'Načítám…';
@@ -292,7 +323,7 @@ function renderProfileHeader(p) {
   if (p.clan && p.clan.name) {
     const sep = bits.length ? ' · ' : '';
     sub.innerHTML += `${sep}<span class="phead-clan" id="prof-clanlink">🛡 ${escapeHtml(p.clan.name)}</span>`;
-    document.getElementById('prof-clanlink').onclick = () => openClan(p.clan.id, p.clan.name);
+    document.getElementById('prof-clanlink').onclick = () => navGo({ type: 'clan', id: p.clan.id, name: p.clan.name });
   }
   set('prof-elo', p.rating != null ? p.rating : '—');
   set('prof-tier', p.tier || '');
@@ -350,7 +381,7 @@ function renderProfileLegends(p) {
 }
 function weaponBar(weapon, frac) {
   const pc = Math.round(frac * 100);
-  return `<div class="wbar">${A.imgTag(A.weaponIcon(weapon), 16)}
+  return `<div class="wbar">${A.imgTag(A.weaponIcon(weapon), 26)}
     <div class="bar"><span style="width:${Math.max(2, pc)}%"></span></div>
     <span class="pc">${pc}%</span></div>`;
 }
@@ -380,7 +411,7 @@ function setPTab(name) {
 document.querySelectorAll('#view-profile .ptab').forEach(t => t.onclick = () => setPTab(t.dataset.ptab));
 
 // ===================== PROFIL GUILDY =====================
-async function openClan(id, name) {
+async function showClan(id, name) {
   document.getElementById('clan-name').textContent = name || 'Načítám…';
   document.getElementById('clan-sub').textContent = '';
   document.getElementById('ctab-members').innerHTML = '';
@@ -426,7 +457,7 @@ function renderClan(clan) {
     </div>`;
   }).join('') + '</div>';
   document.getElementById('ctab-members').innerHTML = cmetrics + list;
-  document.querySelectorAll('#ctab-members .mrow').forEach(el => el.onclick = () => openProfile(el.dataset.name));
+  document.querySelectorAll('#ctab-members .mrow').forEach(el => el.onclick = () => navGo({ type: 'profile', name: el.dataset.name }));
 }
 
 function setCTab(name) {
