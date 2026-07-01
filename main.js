@@ -28,8 +28,6 @@ let panelWin, overlayWin, dashWin, tray, splashWin = null, gameTimer = null, ove
 let ocrRunning = false, gameRunning = false, updateReady = false;
 app.isQuitting = false;
 
-const APP_ICON = path.join(__dirname, 'assets', 'icon.ico');
-
 // --- splash (fotka na pár vteřin při startu) ---
 function createSplash() {
   splashWin = new BrowserWindow({
@@ -122,7 +120,6 @@ function openDashboard() {
   }
   dashWin = new BrowserWindow({
     width: 1360, height: 900, // větší okno, obsah zvětšen zoomem
-    icon: APP_ICON,
     webPreferences: { nodeIntegration: true, contextIsolation: false }
   });
   applyZoom(dashWin, ZOOM.dashboard);
