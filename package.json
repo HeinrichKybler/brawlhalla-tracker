@@ -1,6 +1,6 @@
 {
   "name": "brawlhalla-tracker",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "In-game opponent panel + dashboard for Brawlhalla",
   "main": "main.js",
   "scripts": {
@@ -24,6 +24,7 @@
     "productName": "Brawlhalla Tracker",
     "artifactName": "BrawlhallaTracker-${version}.${ext}",
     "npmRebuild": false,
+    "asarUnpack": ["assets/**"],
     "publish": {
       "provider": "github",
       "owner": "HeinrichKybler",

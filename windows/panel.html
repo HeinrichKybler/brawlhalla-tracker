@@ -27,6 +27,9 @@
 
   .ohead { background: var(--surface); border: 0.5px solid var(--border); border-radius: 8px;
     padding: 10px 12px; margin-bottom: 8px; }
+  .ohead .otop { display: flex; align-items: center; gap: 10px; }
+  .ohead .orank { width: 36px; height: 36px; object-fit: contain; flex: 0 0 auto; }
+  .ohead .oinfo { min-width: 0; }
   .ohead .nm { font-size: 15px; font-weight: 500; color: var(--text); }
   .ohead .er { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
   .ohead .elo { font-size: 18px; font-weight: 500; color: var(--accent2); }
@@ -41,8 +44,9 @@
 
   .row { background: var(--surface); border: 0.5px solid var(--border); border-radius: 6px;
     padding: 7px 9px; margin-bottom: 5px; }
-  .row .top { display: flex; justify-content: space-between; align-items: center; }
-  .row .name { font-size: 12px; font-weight: 500; }
+  .row .top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .row .name { font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .row .name span.t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .row .wr { font-size: 11px; color: var(--success); }
   .row .bar { height: 3px; background: var(--surface2); border-radius: 2px; margin-top: 5px; overflow: hidden; }
   .row .bar > span { display: block; height: 100%; background: var(--accent); }
@@ -67,8 +71,13 @@
     <div id="empty">Stiskni <b>J</b> ve hře pro scan soupeře.</div>
     <div id="content" style="display:none">
       <div class="ohead">
-        <div class="nm" id="name"></div>
-        <div class="er"><span class="elo" id="elo"></span><span class="badge" id="tier"></span></div>
+        <div class="otop">
+          <img class="orank" id="oppRank">
+          <div class="oinfo">
+            <div class="nm" id="name"></div>
+            <div class="er"><span class="elo" id="elo"></span><span class="badge" id="tier"></span></div>
+          </div>
+        </div>
         <div class="peak"><span>Peak</span><b id="peak"></b></div>
       </div>
       <div class="seclabel">Top legendy</div>

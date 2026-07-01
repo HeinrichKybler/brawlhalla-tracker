@@ -1,7 +1,21 @@
 const { ipcRenderer } = require('electron');
+const A = require('./assets');
 const ipc = (ch, ...a) => ipcRenderer.invoke(ch, ...a);
 
 const DAY = 86400000;
+const fmt = n => Number(n || 0).toLocaleString('cs-CZ');
+
+// přibližné tier prahy (pro členy guildy, kde API dává jen ELO)
+function ratingToTierName(r) {
+  if (r == null) return '';
+  if (r >= 2000) return 'Diamond';
+  if (r >= 1680) return 'Platinum';
+  if (r >= 1390) return 'Gold';
+  if (r >= 1076) return 'Silver';
+  if (r >= 766) return 'Bronze';
+  return 'Tin';
+}
+const ROLE_ORDER = { Leader: 0, Officer: 1, Member: 2, Recruit: 3 };
 const startOfDay = ts => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
 
 let matches = [], me = null, currentRange = 'all';
@@ -68,14 +82,13 @@ function renderStatus(ok) {
 }
 
 function renderProfile() {
+  const av = document.getElementById('pf-avatar');
   if (!me) {
-    set('pf-avatar', '–'); document.getElementById('pf-avatar').innerHTML = '–<span class="tierdot" id="pf-tierdot"></span>';
+    av.innerHTML = `<img src="${A.getRankIcon('')}">`;
     set('pf-name', 'Nastav jméno'); set('pf-sub', 'v Nastavení'); set('pf-elo', '—'); set('pf-tier', ''); set('pf-peak', '—');
     return;
   }
-  const av = document.getElementById('pf-avatar');
-  av.innerHTML = `${initials(me.name)}<span class="tierdot"></span>`;
-  av.querySelector('.tierdot').style.background = tierColor(me.tier);
+  av.innerHTML = `<img src="${A.getRankIcon(me.tier)}">`;
   set('pf-name', me.name || '—');
   set('pf-sub', `Sezóna ${me.season}${me.region ? ' · ' + me.region : ''}`);
   set('pf-elo', me.rating != null ? me.rating : '—');
@@ -159,11 +172,270 @@ async function load() {
 
 // nav tabs
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelector('.body').classList.remove('full'); // opusť profil/guildu
   document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
   t.classList.add('active');
   const id = 'view-' + t.dataset.tab;
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === id));
 });
+
+// ---- přepínání na profil / guildu (skryje sidebar) ----
+function showSpecial(viewId) {
+  document.querySelector('.body').classList.add('full');
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === viewId));
+}
+function backToDashboard() {
+  document.querySelector('.body').classList.remove('full');
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === 'dashboard'));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-dashboard'));
+}
+document.getElementById('prof-back').onclick = backToDashboard;
+document.getElementById('clan-back').onclick = backToDashboard;
+
+// ===================== VYHLEDÁVÁNÍ =====================
+const searchInput = document.getElementById('searchInput');
+const dropdown = document.getElementById('searchDropdown');
+let searchTimer = null, sugItems = [], selIdx = -1;
+
+function hideDropdown() { dropdown.hidden = true; dropdown.innerHTML = ''; sugItems = []; selIdx = -1; }
+
+function renderDropdown(history, players) {
+  const items = [];
+  const seen = new Set();
+  for (const p of players || []) {
+    if (!p.name || seen.has('p:' + p.name.toLowerCase())) continue;
+    seen.add('p:' + p.name.toLowerCase());
+    items.push({ kind: 'player', q: p.name });
+  }
+  for (const h of history || []) {
+    const key = h.type + ':' + (h.query || '').toLowerCase();
+    if (seen.has(key)) continue; seen.add(key);
+    items.push({ kind: 'history', q: h.query, type: h.type });
+  }
+  sugItems = items; selIdx = -1;
+  if (!items.length) { dropdown.innerHTML = '<div class="sd-empty">Nic nenalezeno – Enter vyhledá zadané jméno.</div>'; dropdown.hidden = false; return; }
+  dropdown.innerHTML = items.map((it, i) => {
+    const icon = it.kind === 'player' ? '👤' : '🕐';
+    const ty = it.kind === 'player' ? 'hráč' : (it.type === 'clan' ? 'guilda · historie' : 'historie');
+    return `<div class="sd-item" data-i="${i}"><span class="ic">${icon}</span><span class="q">${escapeHtml(it.q)}</span><span class="ty">${ty}</span></div>`;
+  }).join('');
+  dropdown.querySelectorAll('.sd-item').forEach(el => {
+    el.onclick = () => chooseSuggestion(+el.dataset.i);
+    el.onmouseenter = () => { selIdx = +el.dataset.i; highlight(); };
+  });
+  dropdown.hidden = false;
+}
+function highlight() {
+  dropdown.querySelectorAll('.sd-item').forEach((el, i) => el.classList.toggle('sel', i === selIdx));
+}
+function chooseSuggestion(i) {
+  const it = sugItems[i]; if (!it) return;
+  openProfile(it.q);
+}
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  const q = searchInput.value.trim();
+  if (q.length < 2) { hideDropdown(); return; }
+  searchTimer = setTimeout(async () => {
+    const res = await ipc('search:suggest', q).catch(() => ({ history: [], players: [] }));
+    if (searchInput.value.trim().length >= 2) renderDropdown(res.history, res.players);
+  }, 400);
+});
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); if (sugItems.length) { selIdx = (selIdx + 1) % sugItems.length; highlight(); } }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); if (sugItems.length) { selIdx = (selIdx - 1 + sugItems.length) % sugItems.length; highlight(); } }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (selIdx >= 0 && sugItems[selIdx]) chooseSuggestion(selIdx);
+    else if (searchInput.value.trim().length >= 2) openProfile(searchInput.value.trim());
+  } else if (e.key === 'Escape') { hideDropdown(); searchInput.blur(); }
+});
+document.addEventListener('click', e => { if (!e.target.closest('#searchWrap')) hideDropdown(); });
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && (e.key === 'f' || e.key === 'F')) { e.preventDefault(); searchInput.focus(); searchInput.select(); }
+});
+function escapeHtml(s) { return (s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+// ===================== PROFIL HRÁČE =====================
+let profileData = null;
+
+async function openProfile(name) {
+  hideDropdown();
+  searchInput.value = '';
+  document.getElementById('prof-name').textContent = 'Načítám…';
+  document.getElementById('prof-sub').textContent = '';
+  document.getElementById('ptab-info').innerHTML = '';
+  document.getElementById('ptab-legends').innerHTML = '';
+  document.getElementById('ptab-weapons').innerHTML = '';
+  setPTab('info');
+  showSpecial('view-profile');
+  const prof = await ipc('player:profile', name).catch(() => null);
+  if (!prof) { document.getElementById('prof-name').textContent = `„${name}" nenalezen`; return; }
+  profileData = prof;
+  renderProfileHeader(prof);
+  renderProfileInfo(prof);
+  renderProfileLegends(prof);
+  renderProfileWeapons(prof);
+}
+
+function renderProfileHeader(p) {
+  document.getElementById('prof-rank').src = A.getRankIcon(p.tier);
+  document.getElementById('prof-name').textContent = p.name || '—';
+  const title = document.getElementById('prof-title');
+  title.hidden = true; // titul zatím z API nemáme
+  const sub = document.getElementById('prof-sub');
+  const bits = [];
+  if (p.region) bits.push(escapeHtml(p.region));
+  sub.innerHTML = bits.join(' · ');
+  if (p.clan && p.clan.name) {
+    const sep = bits.length ? ' · ' : '';
+    sub.innerHTML += `${sep}<span class="phead-clan" id="prof-clanlink">🛡 ${escapeHtml(p.clan.name)}</span>`;
+    document.getElementById('prof-clanlink').onclick = () => openClan(p.clan.id, p.clan.name);
+  }
+  set('prof-elo', p.rating != null ? p.rating : '—');
+  set('prof-tier', p.tier || '');
+  set('prof-peak', p.peak_rating != null ? p.peak_rating : '—');
+}
+
+function renderProfileInfo(p) {
+  const wins = p.wins || 0, games = p.games || 0, losses = Math.max(0, games - wins);
+  const wrp = games ? Math.round(wins / games * 100) : 0;
+  const deg = Math.round(wrp / 100 * 360);
+  const info = `
+    <div class="info2">
+      <div class="bigcard"><div class="h">Rank</div>
+        <div class="rankrow"><img src="${A.getRankIcon(p.tier)}">
+          <div><div class="rt">${p.tier || 'Unranked'}</div>
+          <div class="re"><b>${p.rating != null ? p.rating : '—'}</b> ELO · peak ${p.peak_rating != null ? p.peak_rating : '—'}</div></div>
+        </div>
+      </div>
+      <div class="bigcard"><div class="h">Winrate</div>
+        <div class="wrrow">
+          <div class="wrcircle" style="background:conic-gradient(var(--accent) ${deg}deg, var(--surface2) 0)">
+            <div class="inner"><div class="pct">${wrp}%</div><div class="lbl">winrate</div></div>
+          </div>
+          <div class="wrlegend">
+            <div><span class="win">■</span> <span class="k">Výhry:</span> <b>${fmt(wins)}</b></div>
+            <div><span class="loss">■</span> <span class="k">Prohry:</span> <b>${fmt(losses)}</b></div>
+            <div><span class="k">Celkem:</span> <b>${fmt(games)}</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="metrics">
+      ${metric('Total KOs', fmt(p.totalKos), 'napříč legendami', true)}
+      ${metric('Total damage', fmt(p.totalDamage), 'způsobené')}
+      ${metric('Nejhranější legenda', p.topLegend ? p.topLegend.name : '—', p.topLegend ? p.topLegend.games + ' her' : '')}
+      ${metric('Nejpoužívanější zbraň', p.topWeapon ? p.topWeapon.name : '—', '')}
+    </div>`;
+  document.getElementById('ptab-info').innerHTML = info;
+}
+
+function renderProfileLegends(p) {
+  const legs = (p.legends || []).slice().sort((a, b) => b.games - a.games);
+  if (!legs.length) { document.getElementById('ptab-legends').innerHTML = '<div class="placeholder">Žádná data o legendách.</div>'; return; }
+  document.getElementById('ptab-legends').innerHTML = '<div class="lgrid2">' + legs.map(l => {
+    const tot = (l.t1 || 0) + (l.t2 || 0);
+    const f1 = tot > 0 ? l.t1 / tot : 0.5, f2 = 1 - f1;
+    const wr = l.games ? Math.round(l.wins / l.games * 100) : 0;
+    return `<div class="lcard">
+      <div class="lh">${A.imgTag(A.legendIcon(l.name, l.id), 40)}
+        <div><div class="ln">${escapeHtml(l.name || '?')}</div><div class="lg">${l.games}g · ${l.wins}w · ${wr}%</div></div></div>
+      <div class="lstats"><span>KOs <b>${fmt(l.kos)}</b></span><span>DMG <b>${fmt(l.damage)}</b></span></div>
+      ${weaponBar(l.w1, f1)}${weaponBar(l.w2, f2)}
+    </div>`;
+  }).join('') + '</div>';
+}
+function weaponBar(weapon, frac) {
+  const pc = Math.round(frac * 100);
+  return `<div class="wbar">${A.imgTag(A.weaponIcon(weapon), 16)}
+    <div class="bar"><span style="width:${Math.max(2, pc)}%"></span></div>
+    <span class="pc">${pc}%</span></div>`;
+}
+
+function renderProfileWeapons(p) {
+  const ws = (p.weapons || []).slice();
+  if (!ws.length) { document.getElementById('ptab-weapons').innerHTML = '<div class="placeholder">Žádná data o zbraních.</div>'; return; }
+  const maxU = Math.max(1, ...ws.map(w => w.usage));
+  const totU = ws.reduce((a, w) => a + w.usage, 0) || 1;
+  document.getElementById('ptab-weapons').innerHTML = ws.map(w => {
+    const share = Math.round(w.usage / totU * 100);
+    return `<div class="wrow">${A.imgTag(A.weaponIcon(w.weapon), 32)}
+      <span class="wn">${escapeHtml(w.weapon)}</span>
+      <div class="wbarwrap"><div class="bar"><span style="width:${Math.max(2, Math.round(w.usage / maxU * 100))}%"></span></div></div>
+      <span class="wmeta">${share}% · KO <b>${fmt(w.kos)}</b> · DMG <b>${fmt(w.damage)}</b></span></div>`;
+  }).join('');
+}
+
+// profil – přepínání záložek
+let ptabInited = false;
+function setPTab(name) {
+  document.querySelectorAll('#view-profile .ptab').forEach(t => t.classList.toggle('active', t.dataset.ptab === name));
+  ['info', 'legends', 'weapons'].forEach(n => {
+    document.getElementById('ptab-' + n).hidden = (n !== name);
+  });
+}
+document.querySelectorAll('#view-profile .ptab').forEach(t => t.onclick = () => setPTab(t.dataset.ptab));
+
+// ===================== PROFIL GUILDY =====================
+async function openClan(id, name) {
+  document.getElementById('clan-name').textContent = name || 'Načítám…';
+  document.getElementById('clan-sub').textContent = '';
+  document.getElementById('ctab-members').innerHTML = '';
+  setCTab('members');
+  showSpecial('view-clan');
+  const clan = await ipc('clan:get', id, name).catch(() => null);
+  if (!clan) { document.getElementById('clan-name').textContent = 'Guildu se nepodařilo načíst'; return; }
+  renderClan(clan);
+}
+
+function renderClan(clan) {
+  const members = (clan.members || []).slice().sort((a, b) => {
+    const ra = ROLE_ORDER[a.rank] ?? 9, rb = ROLE_ORDER[b.rank] ?? 9;
+    if (ra !== rb) return ra - rb;
+    return (b.rating || 0) - (a.rating || 0);
+  });
+  const rated = members.filter(m => m.rating != null);
+  const avg = rated.length ? Math.round(rated.reduce((a, m) => a + m.rating, 0) / rated.length) : null;
+  const best = rated.slice().sort((a, b) => b.rating - a.rating)[0] || null;
+
+  document.getElementById('clan-name').textContent = clan.clan_name || '—';
+  document.getElementById('clan-sub').innerHTML =
+    `Členů: <b style="color:var(--text)">${members.length}</b>` +
+    (avg != null ? ` &nbsp;·&nbsp; Průměrné ELO: <b style="color:var(--text)">${avg}</b>` : '') +
+    (best ? ` &nbsp;·&nbsp; Nejlepší: <b style="color:var(--text)">${escapeHtml(best.name)}</b> (${best.rating})` : '');
+
+  const cmetrics = `<div class="cmetrics">
+    ${metric('Celkem členů', members.length, '', true)}
+    ${metric('Průměrné ELO', avg != null ? avg : '—', rated.length + ' s ELO')}
+    ${metric('Nejlepší ELO', best ? best.rating : '—', best ? best.name : '')}
+    ${metric('Nejhranější legenda', '—', 'není v API')}
+  </div>`;
+  const list = '<div class="mlist">' + members.map(m => {
+    const tier = ratingToTierName(m.rating);
+    return `<div class="mrow" data-name="${escapeHtml(m.name)}">
+      ${A.imgTag(A.roleIcon(m.rank), 24, 'role')}
+      <div class="mav">${initials(m.name)}</div>
+      <span class="mn">${escapeHtml(m.name)}</span>
+      <span class="mrole">${escapeHtml(m.rank || '')}</span>
+      <span class="melo">${m.rating != null ? m.rating : '—'}</span>
+      <span class="mtier">${tier || ''}</span>
+      <span class="marr">›</span>
+    </div>`;
+  }).join('') + '</div>';
+  document.getElementById('ctab-members').innerHTML = cmetrics + list;
+  document.querySelectorAll('#ctab-members .mrow').forEach(el => el.onclick = () => openProfile(el.dataset.name));
+}
+
+function setCTab(name) {
+  document.querySelectorAll('#view-clan .ptab').forEach(t => t.classList.toggle('active', t.dataset.ctab === name));
+  ['members', 'details', 'legends'].forEach(n => {
+    document.getElementById('ctab-' + n).hidden = (n !== name);
+  });
+}
+document.querySelectorAll('#view-clan .ptab').forEach(t => t.onclick = () => setCTab(t.dataset.ctab));
 
 // filtry grafu
 document.querySelectorAll('#filters button').forEach(b => b.onclick = () => {

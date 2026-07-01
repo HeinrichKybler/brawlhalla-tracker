@@ -192,6 +192,40 @@ async function gatherSelf() {
   return { name: p.username, ranked, all };
 }
 
+// kompletní profil hráče pro dashboard (základní info + legendy + zbraně + guilda)
+async function buildProfile(name) {
+  const p = await api.searchPlayer(name);
+  if (!p) return null;
+  const [ranked, all, legendsStatic] = await Promise.all([
+    api.getPlayerRanked(p.id),
+    api.getPlayerAll(p.id),
+    api.getLegends().catch(() => [])
+  ]);
+  const weaponMap = {};
+  for (const l of legendsStatic) weaponMap[l.legend_id] = [l.weapon_one, l.weapon_two];
+  const legends = (all.legends || []).map(l => {
+    const w = weaponMap[l.id] || api.WEAPON_MAP[l.id] || [];
+    return {
+      id: l.id, name: l.name, games: l.games, wins: l.wins, kos: l.kos, damage: l.damage,
+      t1: l.t1, t2: l.t2, w1: w[0] || '', w2: w[1] || ''
+    };
+  });
+  const weapons = api.computeWeaponStats(all.legends, weaponMap);
+  const topLegend = legends.slice().sort((a, b) => b.games - a.games)[0] || null;
+  return {
+    brawlhalla_id: p.id,
+    name: p.username,
+    rating: ranked.rating, peak_rating: ranked.peak_rating, tier: ranked.tier,
+    region: ranked.region || '',
+    wins: ranked.wins || 0, games: ranked.games || 0,
+    clan: all.clan || null,
+    totalKos: all.totalKos || 0, totalDamage: all.totalDamage || 0,
+    topLegend: topLegend ? { id: topLegend.id, name: topLegend.name, games: topLegend.games } : null,
+    topWeapon: weapons[0] ? { name: weapons[0].weapon } : null,
+    legends, weapons, weaponMap
+  };
+}
+
 async function runOcr() {
   if (ocrRunning) return;
   if (app.isPackaged && !gameRunning) return; // aktivní jen při hře (v devu povoleno pro test)
@@ -279,6 +313,32 @@ ipcMain.handle('player:lookup', async (e, name) => {
   if (!p) throw new Error('not found');
   const ranked = await api.getPlayerRanked(p.id);
   return { username: p.username, rating: ranked.rating, tier: ranked.tier };
+});
+
+// dashboard: vyhledávání hráče → našeptávač (historie + živý výsledek z API/mocku)
+ipcMain.handle('search:suggest', async (e, q) => {
+  const history = db.getSearchHistory(q, 6);
+  let players = [];
+  try {
+    const p = await api.searchPlayer(q);
+    if (p && p.username) players = [{ name: p.username, id: p.id }];
+  } catch (_) { /* API mimo */ }
+  return { history, players };
+});
+
+// dashboard: kompletní profil hráče (uloží i do historie hledání)
+ipcMain.handle('player:profile', async (e, name) => {
+  const prof = await buildProfile(name);
+  if (!prof) throw new Error('not found');
+  db.addSearch(name, 'player');
+  return prof;
+});
+
+// dashboard: profil guildy
+ipcMain.handle('clan:get', async (e, clanId, clanName) => {
+  const clan = await api.getClan(clanId);
+  if (clanName) db.addSearch(clanName, 'clan');
+  return clan;
 });
 
 ipcMain.on('match:result', (e, m) => {

@@ -44,11 +44,8 @@
   .pcard { background: var(--surface); border: 0.5px solid var(--border); border-radius: 10px;
     padding: 12px; margin-bottom: 10px; }
   .prow { display: flex; align-items: center; gap: 10px; }
-  .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--surface2);
-    border: 0.5px solid var(--border); display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 600; color: var(--accent2); position: relative; flex: 0 0 auto; }
-  .avatar .tierdot { position: absolute; right: -2px; bottom: -2px; width: 12px; height: 12px;
-    border-radius: 50%; border: 1.5px solid var(--surface); background: var(--muted); }
+  .avatar { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+  .avatar img { width: 44px; height: 44px; object-fit: contain; }
   .pname { font-size: 13px; font-weight: 500; }
   .psub { font-size: 11px; color: var(--muted); }
   .pelo { font-size: 22px; font-weight: 600; color: var(--accent2); margin-top: 10px; display: flex;
@@ -110,6 +107,118 @@
   #msg { font-size: 12px; color: var(--muted); }
   .hint { font-size: 12px; color: var(--muted); line-height: 1.7; }
   .hint b { color: var(--text); }
+
+  /* ---- vyhledávání v titlebaru ---- */
+  #searchWrap { position: relative; flex: 1; max-width: 360px; margin: 0 16px; }
+  .search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
+    font-size: 11px; font-style: normal; opacity: .6; pointer-events: none; }
+  #searchInput { width: 100%; background: var(--surface); border: 0.5px solid var(--border); color: var(--text);
+    border-radius: 7px; padding: 6px 10px 6px 28px; font: 12px "Segoe UI"; outline: none; }
+  #searchInput:focus { border-color: var(--accent); }
+  #searchDropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50;
+    background: var(--surface); border: 0.5px solid var(--border); border-radius: 8px; overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5); max-height: 320px; overflow-y: auto; }
+  .sd-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; cursor: pointer; font-size: 12px; }
+  .sd-item:hover, .sd-item.sel { background: var(--surface2); }
+  .sd-item .ic { width: 14px; text-align: center; opacity: .7; font-style: normal; }
+  .sd-item .q { flex: 1; color: var(--text); }
+  .sd-item .ty { font-size: 10px; color: var(--muted); }
+  .sd-empty { padding: 9px 10px; font-size: 11px; color: var(--muted); }
+  .sd-head { padding: 6px 10px 3px; font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+
+  /* ---- profil hráče / guildy (přebírá celou šířku) ---- */
+  .body.full { grid-template-columns: 1fr; }
+  .body.full .sidebar { display: none; }
+
+  .phead { display: flex; align-items: center; gap: 14px; background: var(--surface);
+    border: 0.5px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .backbtn { background: var(--surface2); border: 0.5px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; flex: 0 0 auto; }
+  .backbtn:hover { border-color: var(--accent); color: var(--accent2); }
+  .phead-rank { width: 46px; height: 46px; object-fit: contain; flex: 0 0 auto; }
+  .chead-shield { width: 46px; height: 46px; border-radius: 10px; background: var(--surface2);
+    border: 0.5px solid var(--border); display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex: 0 0 auto; }
+  .phead-main { flex: 1; min-width: 0; }
+  .phead-name { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .phead-title { font-size: 11px; color: var(--accent2); border: 0.5px solid var(--accent); background: var(--surface2);
+    border-radius: 5px; padding: 1px 7px; font-weight: 400; }
+  .phead-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .phead-clan { color: var(--accent2); cursor: pointer; }
+  .phead-clan:hover { text-decoration: underline; }
+  .phead-elo { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex: 0 0 auto; }
+  .phead-elo .big { font-size: 22px; font-weight: 600; color: var(--accent2); display: flex; align-items: center; gap: 8px; }
+  .phead-elo .peak { font-size: 11px; color: var(--muted); }
+  .phead-elo .peak b { color: var(--text); }
+
+  .ptabs { display: flex; gap: 4px; border-bottom: 0.5px solid var(--border); margin-bottom: 12px; }
+  .ptab { font-size: 12px; color: var(--muted); padding: 7px 12px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -0.5px; }
+  .ptab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+  .ptab-body[hidden], .ctab-body[hidden] { display: none; }
+
+  /* info tab: 2 karty + metriky */
+  .info2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .bigcard { background: var(--surface); border: 0.5px solid var(--border); border-radius: 10px; padding: 14px; }
+  .bigcard .h { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 10px; }
+  .rankrow { display: flex; align-items: center; gap: 12px; }
+  .rankrow img { width: 48px; height: 48px; object-fit: contain; }
+  .rankrow .rt { font-size: 15px; font-weight: 600; }
+  .rankrow .re { font-size: 12px; color: var(--muted); }
+  .rankrow .re b { color: var(--accent2); }
+  .wrrow { display: flex; align-items: center; gap: 16px; }
+  .wrcircle { width: 84px; height: 84px; border-radius: 50%; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
+  .wrcircle .inner { width: 66px; height: 66px; border-radius: 50%; background: var(--surface);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .wrcircle .pct { font-size: 18px; font-weight: 600; }
+  .wrcircle .lbl { font-size: 9px; color: var(--muted); }
+  .wrlegend { font-size: 12px; line-height: 1.9; }
+  .wrlegend .k { color: var(--muted); } .wrlegend b { color: var(--text); }
+  .wrlegend .win { color: var(--success); } .wrlegend .loss { color: var(--danger); }
+
+  /* legendy tab (profil) */
+  .lgrid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .lgrid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .lcard { background: var(--surface); border: 0.5px solid var(--border); border-radius: 9px; padding: 10px; }
+  .lcard .lh { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .lcard .lh img { width: 40px; height: 40px; object-fit: contain; }
+  .lcard .lh .ln { font-size: 13px; font-weight: 600; }
+  .lcard .lh .lg { font-size: 10px; color: var(--muted); }
+  .lstats { display: flex; gap: 10px; font-size: 10px; color: var(--muted); margin-bottom: 7px; flex-wrap: wrap; }
+  .lstats b { color: var(--text); }
+  .wbar { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .wbar img { width: 16px; height: 16px; object-fit: contain; }
+  .wbar .bar { flex: 1; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .wbar .bar > span { display: block; height: 100%; background: var(--accent); }
+  .wbar .pc { font-size: 9px; color: var(--muted); width: 30px; text-align: right; }
+
+  /* zbraně tab (profil) */
+  .wrow { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: 8px; padding: 9px 11px; margin-bottom: 6px; }
+  .wrow img { width: 32px; height: 32px; object-fit: contain; flex: 0 0 auto; }
+  .wrow .wn { font-size: 13px; font-weight: 500; width: 120px; flex: 0 0 auto; }
+  .wrow .wbarwrap { flex: 1; }
+  .wrow .wbarwrap .bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .wrow .wbarwrap .bar > span { display: block; height: 100%; background: var(--accent); }
+  .wrow .wmeta { font-size: 10px; color: var(--muted); text-align: right; width: 150px; flex: 0 0 auto; }
+  .wrow .wmeta b { color: var(--text); }
+
+  /* guilda: členové */
+  .cmetrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .mlist { display: flex; flex-direction: column; gap: 5px; }
+  .mrow { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: 8px; padding: 8px 11px; cursor: pointer; }
+  .mrow:hover { border-color: var(--accent); }
+  .mrow img.role { width: 24px; height: 24px; object-fit: contain; flex: 0 0 auto; }
+  .mrow .mav { width: 28px; height: 28px; border-radius: 50%; background: var(--surface2); border: 0.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--accent2); flex: 0 0 auto; }
+  .mrow .mn { flex: 1; font-size: 13px; font-weight: 500; }
+  .mrow .mrole { font-size: 10px; color: var(--muted); width: 70px; }
+  .mrow .melo { font-size: 13px; font-weight: 600; color: var(--accent2); width: 60px; text-align: right; }
+  .mrow .mtier { font-size: 10px; color: var(--muted); width: 70px; text-align: right; }
+  .mrow .marr { color: var(--muted); }
+
+  .placeholder { background: var(--surface); border: 0.5px solid var(--border); border-radius: 10px;
+    padding: 30px; text-align: center; font-size: 13px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -122,6 +231,11 @@
         <span class="tab" data-tab="settings">Nastavení</span>
       </div>
     </div>
+    <div id="searchWrap">
+      <i class="search-icon">🔍</i>
+      <input id="searchInput" type="text" placeholder="Hledat hráče nebo guildu... (Ctrl+F)" autocomplete="off">
+      <div id="searchDropdown" hidden></div>
+    </div>
     <div class="right">
       <span class="sdot" id="status-dot"></span><span id="status-text">API neaktivní</span>
       <span class="kbd">ALT+B zobrazit/skrýt</span>
@@ -132,7 +246,7 @@
     <aside class="sidebar">
       <div class="pcard">
         <div class="prow">
-          <div class="avatar" id="pf-avatar">–<span class="tierdot" id="pf-tierdot"></span></div>
+          <div class="avatar" id="pf-avatar"></div>
           <div>
             <div class="pname" id="pf-name">—</div>
             <div class="psub" id="pf-sub"></div>
@@ -232,6 +346,54 @@
         </div>
 
         <div class="setrow"><span id="msg"></span></div>
+      </section>
+
+      <!-- profil hráče -->
+      <section class="view" id="view-profile">
+        <div class="phead">
+          <button class="backbtn" id="prof-back">← Zpět</button>
+          <img class="phead-rank" id="prof-rank">
+          <div class="phead-main">
+            <div class="phead-name"><span id="prof-name">—</span><span class="phead-title" id="prof-title" hidden></span></div>
+            <div class="phead-sub" id="prof-sub"></div>
+          </div>
+          <div class="phead-elo">
+            <span class="big"><span id="prof-elo">—</span><span class="badge" id="prof-tier"></span></span>
+            <span class="peak">Peak <b id="prof-peak">—</b></span>
+          </div>
+        </div>
+        <div class="ptabs">
+          <span class="ptab active" data-ptab="info">Základní info</span>
+          <span class="ptab" data-ptab="legends">Legendy</span>
+          <span class="ptab" data-ptab="weapons">Zbraně</span>
+        </div>
+        <div class="ptab-body" id="ptab-info"></div>
+        <div class="ptab-body" id="ptab-legends" hidden></div>
+        <div class="ptab-body" id="ptab-weapons" hidden></div>
+      </section>
+
+      <!-- profil guildy -->
+      <section class="view" id="view-clan">
+        <div class="phead">
+          <button class="backbtn" id="clan-back">← Zpět</button>
+          <div class="chead-shield">🛡</div>
+          <div class="phead-main">
+            <div class="phead-name" id="clan-name">—</div>
+            <div class="phead-sub" id="clan-sub"></div>
+          </div>
+        </div>
+        <div class="ptabs">
+          <span class="ptab active" data-ctab="members">Členové</span>
+          <span class="ptab" data-ctab="details">Detaily guildy</span>
+          <span class="ptab" data-ctab="legends">Legendy</span>
+        </div>
+        <div class="ctab-body" id="ctab-members"></div>
+        <div class="ctab-body" id="ctab-details" hidden>
+          <div class="placeholder">Dostupné po rozšíření Brawlhalla API.</div>
+        </div>
+        <div class="ctab-body" id="ctab-legends" hidden>
+          <div class="placeholder">Statistiky legend guildy nejsou v Brawlhalla API dostupné.</div>
+        </div>
       </section>
     </main>
   </div>

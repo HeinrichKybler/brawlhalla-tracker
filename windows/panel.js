@@ -1,5 +1,6 @@
 const { ipcRenderer } = require('electron');
 const { computeWeaponUsage, WEAPON_MAP } = require('../api');
+const A = require('./assets');
 
 let ctx = null;
 
@@ -12,10 +13,10 @@ function setDot(state, label) {
   if (l) l.textContent = label;
 }
 
-function bar(name, fraction, right, below, current) {
+function bar(name, fraction, right, below, current, icon) {
   const pct = Math.max(2, Math.round(fraction * 100));
   return `<div class="row ${current ? 'cur' : ''}">
-    <div class="top"><span class="name">${name}</span><span class="wr">${right || ''}</span></div>
+    <div class="top"><span class="name">${icon || ''}<span class="t">${name}</span></span><span class="wr">${right || ''}</span></div>
     <div class="bar"><span style="width:${pct}%"></span></div>
     ${below ? `<div class="sub2">${below}</div>` : ''}
   </div>`;
@@ -55,6 +56,7 @@ function render(d) {
   document.getElementById('empty').style.display = 'none';
   document.getElementById('content').style.display = 'block';
   document.getElementById('name').textContent = d.opponent;
+  document.getElementById('oppRank').src = A.getRankIcon(d.ranked.tier);
   document.getElementById('elo').textContent = d.ranked.rating != null ? `${d.ranked.rating} ELO` : '—';
   document.getElementById('tier').textContent = d.ranked.tier || '';
   document.getElementById('peak').textContent = d.ranked.peak_rating != null ? d.ranked.peak_rating : '—';
@@ -64,7 +66,7 @@ function render(d) {
   document.getElementById('legends').innerHTML = legs.map(l => {
     const pct = Math.round(l.games / maxG * 100);
     return bar(l.name || '?', l.games / maxG, `${Math.round((l.winrate || 0) * 100)}%`,
-      `${pct}% · ${l.games}g`, norm(l.name) === norm(d.opponentLegend));
+      `${pct}% · ${l.games}g`, norm(l.name) === norm(d.opponentLegend), A.imgTag(A.legendIcon(l.name, l.id), 24));
   }).join('');
 
   let weapons = computeWeaponUsage(d.all.legends, d.weaponMap);
@@ -83,7 +85,7 @@ function render(d) {
   }
   const maxW = Math.max(1, ...weapons.map(w => w.usage));
   document.getElementById('weapons').innerHTML = weapons.map(w =>
-    bar(w.weapon, w.usage / maxW, '', `${Math.round(w.usage / maxW * 100)}%`, cur.includes(w.weapon))
+    bar(w.weapon, w.usage / maxW, '', `${Math.round(w.usage / maxW * 100)}%`, cur.includes(w.weapon), A.imgTag(A.weaponIcon(w.weapon), 24))
   ).join('');
 }
 

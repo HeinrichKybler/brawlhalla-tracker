@@ -45,7 +45,34 @@ function init() {
       title TEXT PRIMARY KEY,
       updated INTEGER
     );
+    CREATE TABLE IF NOT EXISTS search_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      query TEXT,
+      type TEXT,
+      timestamp INTEGER
+    );
   `);
+}
+
+// historie hledání: nový záznam nahoře, bez duplicit (stejný query+type se posune nahoru)
+function addSearch(query, type) {
+  const q = (query || '').trim();
+  if (!q) return;
+  const d = getDb();
+  d.prepare(`DELETE FROM search_history WHERE query = ? AND type = ?`).run(q, type || 'player');
+  d.prepare(`INSERT INTO search_history (query, type, timestamp) VALUES (?,?,?)`).run(q, type || 'player', Date.now());
+  // ořež na posledních 50
+  d.prepare(`DELETE FROM search_history WHERE id NOT IN (SELECT id FROM search_history ORDER BY timestamp DESC LIMIT 50)`).run();
+}
+function getSearchHistory(query, limit) {
+  const d = getDb();
+  const lim = limit || 6;
+  if (query && query.trim()) {
+    return d.prepare(
+      `SELECT query, type, timestamp FROM search_history WHERE query LIKE ? ORDER BY timestamp DESC LIMIT ?`
+    ).all('%' + query.trim() + '%', lim);
+  }
+  return d.prepare(`SELECT query, type, timestamp FROM search_history ORDER BY timestamp DESC LIMIT ?`).all(lim);
 }
 
 function saveMatch({ timestamp, result, my_elo, opponent_elo, season }) {
@@ -109,5 +136,6 @@ function getLegends() {
 
 module.exports = {
   init, saveMatch, getMatches, getSetting, setSetting,
-  getTitles, setTitles, titlesAge, setLegends, getLegends
+  getTitles, setTitles, titlesAge, setLegends, getLegends,
+  addSearch, getSearchHistory
 };
